@@ -82,6 +82,31 @@ update chargers set site_name = '여의도 충전소', lat = 37.5219, lng = 126.
 
 지도는 별도 API 키 없이 쓸 수 있는 OpenStreetMap 기반이라 추가 가입 없이 바로 동작합니다.
 
+### 한 지점에 충전기가 여러 대거나, 지점이 여러 곳으로 가까이 있을 때
+
+충전기를 사이트(지점) 단위로 묶어서 핀 하나로 보여주고(그 안에 몇 대가 있는지, 그중 고장이
+있는지 배지로 표시), 지점끼리 가까우면 지도를 축소했을 때 핀들을 숫자 배지 하나로 뭉쳐서
+보여주는 **마커 클러스터링**이 이미 코드에 들어가 있습니다. 이걸 실제로 확인해보려면
+충전기 2대를 더 추가해서 "한 지점에 2대", "서로 가까운 두 지점" 상황을 만들어보세요.
+
+```sql
+insert into chargers (id, vendor, model, status, error_code, connector_id, connected, last_seen)
+values
+  ('CP-4', 'DemoVendor', 'DC-50kW', 'Available', 'NoError', 1, true, now()),
+  ('CP-5', 'DemoVendor', 'DC-50kW', 'Available', 'NoError', 1, true, now())
+on conflict (id) do nothing;
+
+-- CP-4는 CP-1과 같은 강남역 충전소 → 핀 하나에 2대가 묶여서 보임
+update chargers set site_name = '강남역 충전소', lat = 37.4979, lng = 127.0276 where id = 'CP-4';
+
+-- CP-5는 홍대입구 바로 옆 신촌 충전소 → 지도를 축소하면 두 지점 핀이 하나로 뭉쳐짐
+update chargers set site_name = '신촌 충전소', lat = 37.5596, lng = 126.9427 where id = 'CP-5';
+```
+
+CP-4, CP-5도 버튼으로 상태를 바꿀 수 있게 하려면, `supabase/functions/set-charger-status/index.ts`의
+`ALLOWED_IDS` 목록이 이미 `CP-4`, `CP-5`까지 포함해서 갱신되어 있으니, Supabase 대시보드에서
+**Edge Functions → set-charger-status → 코드 편집 → 새 내용 붙여넣기 → Deploy**로 다시 배포해주세요.
+
 ### (선택) 터미널로 자동 시뮬레이션
 
 버튼 클릭 대신, 충전기가 스스로 주기적으로 상태를 보고하는 모습까지 보여주고 싶다면

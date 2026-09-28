@@ -8,14 +8,19 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const cardsEl = document.getElementById('cards');
 const connStatusEl = document.getElementById('conn-status');
-const cards = new Map();
-const markers = new Map();
+
+const chargersById = new Map(); // id -> row
+const siteGroupEls = new Map(); // siteName -> { section, title, badge, cardsWrap }
+const cardEls = new Map(); // id -> card element
+const siteMarkers = new Map(); // siteName -> marker
 
 const map = L.map('map', { scrollWheelZoom: false }).setView([37.52, 127.0], 11);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors',
   maxZoom: 19,
 }).addTo(map);
+const markerCluster = L.markerClusterGroup({ maxClusterRadius: 50 });
+map.addLayer(markerCluster);
 
 function statusMeta(status) {
   switch (status) {
@@ -34,6 +39,50 @@ function statusMeta(status) {
   }
 }
 
+function siteKey(charger) {
+  return charger.site_name || '위치 미등록';
+}
+
+function getChargersForSite(site) {
+  return [...chargersById.values()].filter((c) => siteKey(c) === site);
+}
+
+// 사이트 안에 고장이 하나라도 있으면 고장, 아니면 통신 두절이 하나라도 있으면 그걸로,
+// 전부 정상이면 정상으로 — 한 지점의 대표 상태를 정한다.
+function aggregateMeta(chargersInSite) {
+  if (chargersInSite.some((c) => statusMeta(c.status).cls === 'fault')) {
+    return { label: '고장 있음', cls: 'fault', color: '#c0392b' };
+  }
+  if (chargersInSite.some((c) => statusMeta(c.status).cls === 'offline')) {
+    return { label: '통신 두절 있음', cls: 'offline', color: '#9a9a90' };
+  }
+  return { label: '전체 정상', cls: 'ok', color: '#2f8f5b' };
+}
+
+function getOrCreateSiteGroup(site) {
+  let group = siteGroupEls.get(site);
+  if (!group) {
+    const section = document.createElement('section');
+    section.className = 'site-group';
+    section.innerHTML = `
+      <div class="site-header">
+        <h3 class="site-title"></h3>
+        <span class="site-badge"></span>
+      </div>
+      <div class="site-cards"></div>
+    `;
+    cardsEl.appendChild(section);
+    group = {
+      section,
+      title: section.querySelector('.site-title'),
+      badge: section.querySelector('.site-badge'),
+      cardsWrap: section.querySelector('.site-cards'),
+    };
+    siteGroupEls.set(site, group);
+  }
+  return group;
+}
+
 async function setStatus(id, status, button) {
   button.disabled = true;
   // 테이블에 직접 쓰지 않고, 서버 쪽 Edge Function을 통해서만 상태를 바꿉니다.
@@ -43,7 +92,10 @@ async function setStatus(id, status, button) {
 }
 
 function renderCard(charger) {
-  let card = cards.get(charger.id);
+  const group = getOrCreateSiteGroup(siteKey(charger));
+  group.title.textContent = siteKey(charger);
+
+  let card = cardEls.get(charger.id);
   if (!card) {
     card = document.createElement('div');
     card.className = 'card';
@@ -56,36 +108,53 @@ function renderCard(charger) {
         <button type="button" class="btn btn-ok">정상으로 복귀</button>
       </div>
     `;
-    cardsEl.appendChild(card);
-    cards.set(charger.id, card);
+    group.cardsWrap.appendChild(card);
+    cardEls.set(charger.id, card);
 
     card.querySelector('.btn-fault').addEventListener('click', (e) => setStatus(charger.id, 'Faulted', e.currentTarget));
     card.querySelector('.btn-ok').addEventListener('click', (e) => setStatus(charger.id, 'Available', e.currentTarget));
   }
   const meta = statusMeta(charger.status);
   card.className = `card ${meta.cls}`;
-  card.querySelector('.card-id').textContent = charger.site_name ? `${charger.site_name} (${charger.id})` : charger.id;
+  card.querySelector('.card-id').textContent = charger.id;
   card.querySelector('.card-status').textContent = meta.label;
   const time = charger.last_seen ? new Date(charger.last_seen).toLocaleTimeString('ko-KR') : '-';
   card.querySelector('.card-meta').textContent = `${charger.vendor || '미확인'} · 마지막 신호 ${time}`;
 }
 
-function renderMarker(charger) {
-  if (charger.lat == null || charger.lng == null) return;
-  const meta = statusMeta(charger.status);
-  const label = charger.site_name ? `${charger.site_name} (${charger.id})` : charger.id;
-  let marker = markers.get(charger.id);
+function renderSiteMarker(site) {
+  const chargersInSite = getChargersForSite(site);
+  const withLoc = chargersInSite.find((c) => c.lat != null && c.lng != null);
+  if (!withLoc) return;
+
+  const meta = aggregateMeta(chargersInSite);
+  const group = siteGroupEls.get(site);
+  if (group) {
+    group.badge.textContent = `${meta.label} · ${chargersInSite.length}대`;
+    group.badge.className = `site-badge ${meta.cls}`;
+  }
+
+  const popupRows = chargersInSite.map((c) => `${c.id} · ${statusMeta(c.status).label}`).join('<br>');
+
+  let marker = siteMarkers.get(site);
   if (!marker) {
-    marker = L.circleMarker([charger.lat, charger.lng], {
-      radius: 11,
+    marker = L.circleMarker([withLoc.lat, withLoc.lng], {
+      radius: 12,
       weight: 2,
       color: '#fff',
       fillOpacity: 1,
-    }).addTo(map);
-    markers.set(charger.id, marker);
+    });
+    siteMarkers.set(site, marker);
+    markerCluster.addLayer(marker);
   }
   marker.setStyle({ fillColor: meta.color });
-  marker.bindPopup(`<b>${label}</b><br>${meta.label}`);
+  marker.bindPopup(`<b>${site}</b><br>${popupRows}`);
+}
+
+function upsertChargerLocal(charger) {
+  chargersById.set(charger.id, charger);
+  renderCard(charger);
+  renderSiteMarker(siteKey(charger));
 }
 
 async function loadInitial() {
@@ -94,13 +163,11 @@ async function loadInitial() {
     connStatusEl.textContent = `데이터를 불러오지 못했습니다: ${error.message}`;
     return;
   }
-  data.forEach((charger) => {
-    renderCard(charger);
-    renderMarker(charger);
-  });
+  data.forEach(upsertChargerLocal);
+
   const withLocation = data.filter((c) => c.lat != null && c.lng != null);
   if (withLocation.length) {
-    map.fitBounds(withLocation.map((c) => [c.lat, c.lng]), { padding: [30, 30], maxZoom: 13 });
+    map.fitBounds(withLocation.map((c) => [c.lat, c.lng]), { padding: [40, 40], maxZoom: 13 });
   }
   connStatusEl.textContent = `실시간 연결됨 — 충전기 ${data.length}대 표시 중. 카드의 버튼으로 직접 상태를 바꿔보세요.`;
 }
@@ -109,10 +176,7 @@ function subscribeRealtime() {
   supabase
     .channel('chargers-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chargers' }, (payload) => {
-      if (payload.new) {
-        renderCard(payload.new);
-        renderMarker(payload.new);
-      }
+      if (payload.new) upsertChargerLocal(payload.new);
     })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {

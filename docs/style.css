@@ -31,10 +31,44 @@ header h1 {
 }
 
 main#cards {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 24px 32px;
+}
+
+.site-group { }
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.site-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.site-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.site-badge.ok { background: #eaf5ef; color: #2f8f5b; }
+.site-badge.fault { background: #fdf1ef; color: #c0392b; }
+.site-badge.offline { background: #f0f0ec; color: #7a7a70; }
+
+.site-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
-  padding: 24px 32px;
 }
 
 .card {
