@@ -65,29 +65,58 @@ Supabase에 한 번 배포해야 버튼이 동작합니다.
 GitHub Pages 활성화 방법: 저장소 **Settings → Pages → Source: Deploy from a branch →
 Branch: main, Folder: /docs → Save**.
 
-### 지도에 위치 표시하기
+### 지점(사이트) 관리 — 지도, 검색, 주소
 
-카드 목록 위에 지도가 뜨고, 충전기 위치에 상태별 색깔로 핀이 찍힙니다. 이걸 켜려면
-Supabase SQL Editor에서 아래를 한 번 실행해서 위치 컬럼을 추가하고 데모용 좌표를 넣어주세요.
+충전기는 이제 `chargers` 테이블 하나가 아니라 **`sites`(지점) 테이블과 `chargers`(충전기)
+테이블 둘로 나뉩니다.** 지점 이름/주소/좌표는 `sites`에 있고, `chargers`는 `site_id`로
+자기가 어느 지점 소속인지만 가리킵니다. 지점 ID는 사람이 짓는 이름이 아니라 데이터베이스가
+자동으로 만들어주는 고유 값(UUID)이라, 서로 다른 두 지점이 이름이 같아도 안 섞입니다.
+
+이걸 켜면: 카드 목록 위에 지도가 뜨고 충전기 위치에 상태별 색깔 핀이 찍히고, 같은 지점에
+충전기가 여러 대면 핀 하나에 묶여서 보이고, 가까운 지점끼리는 지도를 축소했을 때 하나로
+뭉쳐 보이는 **마커 클러스터링**이 되고, 검색창에 지점 이름/주소를 치면 그 지점으로 지도가
+이동합니다. 지도는 별도 API 키 없이 쓸 수 있는 OpenStreetMap 기반입니다.
+
+Supabase SQL Editor에서 아래를 한 번에 실행해주세요 (`sites` 테이블 생성 + 지점 4곳 등록 +
+기존 충전기 5대를 각자 지점에 연결까지 한 번에 처리합니다):
 
 ```sql
-alter table chargers add column if not exists site_name text;
-alter table chargers add column if not exists lat double precision;
-alter table chargers add column if not exists lng double precision;
+create table if not exists sites (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  address text,
+  lat double precision,
+  lng double precision
+);
 
-update chargers set site_name = '강남역 충전소', lat = 37.4979, lng = 127.0276 where id = 'CP-1';
-update chargers set site_name = '홍대입구 충전소', lat = 37.5563, lng = 126.9236 where id = 'CP-2';
-update chargers set site_name = '여의도 충전소', lat = 37.5219, lng = 126.9245 where id = 'CP-3';
+alter table sites enable row level security;
+drop policy if exists sites_public_read on sites;
+create policy sites_public_read on sites for select using (true);
+
+alter table chargers drop column if exists site_id;
+alter table chargers drop column if exists site_name;
+alter table chargers drop column if exists address;
+alter table chargers drop column if exists lat;
+alter table chargers drop column if exists lng;
+alter table chargers add column site_id uuid references sites(id);
+
+with s as (
+  insert into sites (name, address, lat, lng) values
+    ('강남역 충전소', '서울 강남구 강남대로 396', 37.4979, 127.0276),
+    ('홍대입구 충전소', '서울 마포구 양화로 160', 37.5563, 126.9236),
+    ('여의도 충전소', '서울 영등포구 여의공원로 68', 37.5219, 126.9245),
+    ('신촌 충전소', '서울 서대문구 신촌로 83', 37.5596, 126.9427)
+  returning id, name
+)
+update chargers c set site_id = s.id
+from s
+where (c.id in ('CP-1', 'CP-4') and s.name = '강남역 충전소')
+   or (c.id = 'CP-2' and s.name = '홍대입구 충전소')
+   or (c.id = 'CP-3' and s.name = '여의도 충전소')
+   or (c.id = 'CP-5' and s.name = '신촌 충전소');
 ```
 
-지도는 별도 API 키 없이 쓸 수 있는 OpenStreetMap 기반이라 추가 가입 없이 바로 동작합니다.
-
-### 한 지점에 충전기가 여러 대거나, 지점이 여러 곳으로 가까이 있을 때
-
-충전기를 사이트(지점) 단위로 묶어서 핀 하나로 보여주고(그 안에 몇 대가 있는지, 그중 고장이
-있는지 배지로 표시), 지점끼리 가까우면 지도를 축소했을 때 핀들을 숫자 배지 하나로 뭉쳐서
-보여주는 **마커 클러스터링**이 이미 코드에 들어가 있습니다. 이걸 실제로 확인해보려면
-충전기 2대를 더 추가해서 "한 지점에 2대", "서로 가까운 두 지점" 상황을 만들어보세요.
+(CP-4, CP-5가 아직 없다면 "한 지점에 여러 대" 상황을 보려면 먼저 만들어야 합니다:
 
 ```sql
 insert into chargers (id, vendor, model, status, error_code, connector_id, connected, last_seen)
@@ -95,50 +124,11 @@ values
   ('CP-4', 'DemoVendor', 'DC-50kW', 'Available', 'NoError', 1, true, now()),
   ('CP-5', 'DemoVendor', 'DC-50kW', 'Available', 'NoError', 1, true, now())
 on conflict (id) do nothing;
-
--- CP-4는 CP-1과 같은 강남역 충전소 → 핀 하나에 2대가 묶어서 보임
-update chargers set site_name = '강남역 충전소', lat = 37.4979, lng = 127.0276 where id = 'CP-4';
-
--- CP-5는 홍대입구 바로 옆 신촌 충전소 → 지도를 축소하면 두 지점 핀이 하나로 뭉쳐짐
-update chargers set site_name = '신촌 충전소', lat = 37.5596, lng = 126.9427 where id = 'CP-5';
 ```
 
-CP-4, CP-5도 버튼으로 상태를 바꿀 수 있게 하려면, `supabase/functions/set-charger-status/index.ts`의
-`ALLOWED_IDS` 목록이 이미 `CP-4`, `CP-5`까지 포함해서 갱신되어 있으니, Supabase 대시보드에서
-**Edge Functions → set-charger-status → 코드 편집 → 새 내용 붙여넣기 → Deploy**로 다시 배포해주세요.
-
-### 주소로 검색하기
-
-지도 위에 검색창이 있어서, 지점 이름이나 주소로 검색하면 그 지점으로 지도가 이동하고
-목록에서도 안 맞는 지점은 걸러집니다. 카드 목록에도 각 지점의 주소가 표시됩니다.
-이걸 켜려면 주소 컬럼을 추가하고 데모용 주소를 넣어주세요.
-
-```sql
-alter table chargers add column if not exists address text;
-
-update chargers set address = '서울 강남구 강남대로 396' where id in ('CP-1', 'CP-4');
-update chargers set address = '서울 마포구 양화로 160' where id = 'CP-2';
-update chargers set address = '서울 영등포구 여의공원로 68' where id = 'CP-3';
-update chargers set address = '서울 서대문구 신촌로 83' where id = 'CP-5';
-```
-
-### 지점 구분은 이름이 아니라 고유 ID로
-
-처음엔 지점을 `site_name`(이름)으로 묶었는데, 이건 서로 다른 두 지점이 우연히 같은 이름을
-쓰면 하나로 합쳐져 버리는 문제가 있습니다. 그래서 그룹을 짓는 진짜 키는 `site_id`(고유 값)로
-바꾸고, `site_name`은 화면에 보여주는 이름표로만 쓰도록 코드를 고쳤습니다. 이걸 켜려면:
-
-```sql
-alter table chargers add column if not exists site_id text;
-
-update chargers set site_id = 'gangnam-station' where id in ('CP-1', 'CP-4');
-update chargers set site_id = 'hongdae-station' where id = 'CP-2';
-update chargers set site_id = 'yeouido-station' where id = 'CP-3';
-update chargers set site_id = 'sinchon-station' where id = 'CP-5';
-```
-
-(`site_id`가 비어 있는 충전기는 각자 자기 자신을 하나의 지점으로 취급하니, 기존 데이터가
-당장 깨지진 않습니다. 다만 지점별로 묶어 보려면 위 SQL로 채워주는 게 맞습니다.)
+이 두 대도 버튼으로 상태를 바꾸려면 `supabase/functions/set-charger-status/index.ts`의
+`ALLOWED_IDS`에 이미 포함되어 있으니, Supabase 대시보드에서 **Edge Functions →
+set-charger-status → 코드 편집 → 새 내용 붙여넣기 → Deploy**로 다시 배포해주세요.)
 
 ### (선택) 터미널로 자동 시뮬레이션
 

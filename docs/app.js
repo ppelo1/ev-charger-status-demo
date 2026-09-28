@@ -164,7 +164,12 @@ function renderSiteMarker(site) {
   marker.bindPopup(`<b>${label}</b><br>${popupRows}`);
 }
 
-function upsertChargerLocal(charger) {
+// Realtime으로 오는 건 chargers 테이블 원본 행뿐이라 site_name/address/lat/lng처럼
+// sites 테이블에서 join해온 값은 안 들어있습니다. 기존에 캐시해둔 값 위에 덮어써서
+// (없는 필드는 그대로 유지되도록) 합칩니다.
+function upsertChargerLocal(partial) {
+  const prev = chargersById.get(partial.id) || {};
+  const charger = { ...prev, ...partial };
   chargersById.set(charger.id, charger);
   renderCard(charger);
   renderSiteMarker(siteKey(charger));
@@ -195,16 +200,29 @@ function applySearch(query) {
 searchInput.addEventListener('input', (e) => applySearch(e.target.value));
 
 async function loadInitial() {
-  const { data, error } = await supabase.from('chargers').select('*').order('id');
+  // sites 테이블과 join해서 지점 이름/주소/좌표를 같이 가져옵니다.
+  const { data, error } = await supabase
+    .from('chargers')
+    .select('*, sites(name, address, lat, lng)')
+    .order('id');
   if (error) {
     connStatusEl.textContent = `데이터를 불러오지 못했습니다: ${error.message}`;
     return;
   }
-  data.forEach(upsertChargerLocal);
+  data.forEach((row) => {
+    const { sites, ...charger } = row;
+    upsertChargerLocal({
+      ...charger,
+      site_name: sites?.name ?? null,
+      address: sites?.address ?? null,
+      lat: sites?.lat ?? null,
+      lng: sites?.lng ?? null,
+    });
+  });
 
-  const withLocation = data.filter((c) => c.lat != null && c.lng != null);
+  const withLocation = data.filter((c) => c.sites?.lat != null && c.sites?.lng != null);
   if (withLocation.length) {
-    map.fitBounds(withLocation.map((c) => [c.lat, c.lng]), { padding: [40, 40], maxZoom: 13 });
+    map.fitBounds(withLocation.map((c) => [c.sites.lat, c.sites.lng]), { padding: [40, 40], maxZoom: 13 });
   }
   connStatusEl.textContent = `실시간 연결됨 — 충전기 ${data.length}대 표시 중. 카드의 버튼으로 직접 상태를 바꿔보세요.`;
 }
