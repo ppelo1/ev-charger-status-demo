@@ -7,11 +7,15 @@
 
 ## 구성
 
-- `server.js` — OCPP 신호를 받는 서버 + 대시보드용 웹 서버 (포트 3000)
-- `simulator.js` — 가짜 충전기 여러 대를 만들어 서버에 연결하고, 주기적으로 상태를 보고
-- `public/` — 브라우저로 보는 실시간 대시보드
+두 가지 버전이 있습니다. 원리는 같고, 실행 장소만 다릅니다.
 
-## 실행 방법
+- **로컬 OCPP 버전** (`server.js` + `simulator.js` + `public/`) — 실제 OCPP 메시지(BootNotification,
+  StatusNotification)를 주고받는 완전한 형태. 로컬에서만 실행됩니다.
+- **웹 공유 버전** (`simulator-supabase.js` + `docs/`) — 자체 서버 대신 Supabase를 상태 저장소로
+  써서, GitHub Pages에 올려 URL로 공유할 수 있게 만든 버전. OCPP 메시지 자체는 안 나오고,
+  "충전기 상태가 바뀌면 화면에 바로 반영된다"는 핵심 동작만 재현합니다.
+
+## 실행 방법 (로컬 OCPP 버전)
 
 ```bash
 npm install
@@ -38,6 +42,22 @@ npm run simulate
 - `CP-2 ok` — CP-2를 정상 상태로 복귀
 
 미팅 자리에서 "지금 이 충전기가 고장났다고 신호를 보내면" 하고 직접 입력해서 보여주면 됩니다.
+
+## 웹 공유 버전 (URL로 보여주기)
+
+Supabase 프로젝트를 만들고 `.env.example`을 참고해 `.env` 파일에 키 값을 채운 뒤:
+
+```bash
+npm install
+npm run simulate:web
+```
+
+이렇게 하면 이 컴퓨터에서 Supabase로 상태를 계속 보내고, GitHub Pages에 올라간
+`docs/index.html`을 누구든 열어보면 실시간으로 같이 반영됩니다. 로컬 OCPP 버전과 마찬가지로
+`CP-1 fault` / `CP-1 ok` 명령으로 라이브 시연이 가능합니다.
+
+GitHub Pages 활성화 방법: 저장소 **Settings → Pages → Source: Deploy from a branch →
+Branch: main, Folder: /docs → Save**.
 
 ## 이 데모가 보여주는 것 / 보여주지 않는 것
 

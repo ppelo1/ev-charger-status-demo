@@ -1,0 +1,65 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  background: #f4f4f2;
+  color: #222;
+}
+
+header {
+  padding: 24px 32px;
+  background: #1f2a24;
+  color: #fff;
+}
+
+header h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+#conn-status {
+  margin: 0;
+  font-size: 13px;
+  color: #b7c9bf;
+}
+
+main#cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  padding: 24px 32px;
+}
+
+.card {
+  border-radius: 10px;
+  padding: 16px;
+  background: #fff;
+  border-left: 6px solid #999;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.card.ok { border-left-color: #2f8f5b; }
+.card.fault { border-left-color: #c0392b; background: #fdf1ef; }
+.card.offline { border-left-color: #9a9a90; background: #f6f6f3; }
+
+.card-id {
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.card-status {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.card.ok .card-status { color: #2f8f5b; }
+.card.fault .card-status { color: #c0392b; }
+.card.offline .card-status { color: #7a7a70; }
+
+.card-meta {
+  font-size: 12px;
+  color: #666;
+}
