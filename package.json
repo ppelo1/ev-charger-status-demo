@@ -1,0 +1,15 @@
+{
+  "name": "ev-charger-status-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OCPP 기반 전기차 충전기 실시간 고장 상태 모니터링 데모",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "simulate": "node simulator.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.17.0"
+  }
+}
