@@ -8,6 +8,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const cardsEl = document.getElementById('cards');
 const connStatusEl = document.getElementById('conn-status');
+const searchInput = document.getElementById('search-input');
 
 const chargersById = new Map(); // id -> row
 const siteGroupEls = new Map(); // siteName -> { section, title, badge, cardsWrap }
@@ -66,7 +67,10 @@ function getOrCreateSiteGroup(site) {
     section.className = 'site-group';
     section.innerHTML = `
       <div class="site-header">
-        <h3 class="site-title"></h3>
+        <div>
+          <h3 class="site-title"></h3>
+          <p class="site-address"></p>
+        </div>
         <span class="site-badge"></span>
       </div>
       <div class="site-cards"></div>
@@ -75,6 +79,7 @@ function getOrCreateSiteGroup(site) {
     group = {
       section,
       title: section.querySelector('.site-title'),
+      address: section.querySelector('.site-address'),
       badge: section.querySelector('.site-badge'),
       cardsWrap: section.querySelector('.site-cards'),
     };
@@ -94,6 +99,7 @@ async function setStatus(id, status, button) {
 function renderCard(charger) {
   const group = getOrCreateSiteGroup(siteKey(charger));
   group.title.textContent = siteKey(charger);
+  if (charger.address) group.address.textContent = charger.address;
 
   let card = cardEls.get(charger.id);
   if (!card) {
@@ -156,6 +162,29 @@ function upsertChargerLocal(charger) {
   renderCard(charger);
   renderSiteMarker(siteKey(charger));
 }
+
+// 지점 이름이나 주소로 검색 — 목록에서 안 맞는 지점은 숨기고, 지도는 맞는 지점들로 이동합니다.
+function applySearch(query) {
+  const q = query.trim().toLowerCase();
+  const matchedCoords = [];
+
+  siteGroupEls.forEach((group, site) => {
+    const chargersInSite = getChargersForSite(site);
+    const address = (chargersInSite[0]?.address || '').toLowerCase();
+    const matches = !q || site.toLowerCase().includes(q) || address.includes(q);
+    group.section.style.display = matches ? '' : 'none';
+    if (matches) {
+      const withLoc = chargersInSite.find((c) => c.lat != null && c.lng != null);
+      if (withLoc) matchedCoords.push([withLoc.lat, withLoc.lng]);
+    }
+  });
+
+  if (matchedCoords.length) {
+    map.fitBounds(matchedCoords, { padding: [40, 40], maxZoom: q ? 15 : 13 });
+  }
+}
+
+searchInput.addEventListener('input', (e) => applySearch(e.target.value));
 
 async function loadInitial() {
   const { data, error } = await supabase.from('chargers').select('*').order('id');

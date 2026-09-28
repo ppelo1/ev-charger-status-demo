@@ -96,7 +96,7 @@ values
   ('CP-5', 'DemoVendor', 'DC-50kW', 'Available', 'NoError', 1, true, now())
 on conflict (id) do nothing;
 
--- CP-4는 CP-1과 같은 강남역 충전소 → 핀 하나에 2대가 묶여서 보임
+-- CP-4는 CP-1과 같은 강남역 충전소 → 핀 하나에 2대가 묶어서 보임
 update chargers set site_name = '강남역 충전소', lat = 37.4979, lng = 127.0276 where id = 'CP-4';
 
 -- CP-5는 홍대입구 바로 옆 신촌 충전소 → 지도를 축소하면 두 지점 핀이 하나로 뭉쳐짐
@@ -106,6 +106,21 @@ update chargers set site_name = '신촌 충전소', lat = 37.5596, lng = 126.942
 CP-4, CP-5도 버튼으로 상태를 바꿀 수 있게 하려면, `supabase/functions/set-charger-status/index.ts`의
 `ALLOWED_IDS` 목록이 이미 `CP-4`, `CP-5`까지 포함해서 갱신되어 있으니, Supabase 대시보드에서
 **Edge Functions → set-charger-status → 코드 편집 → 새 내용 붙여넣기 → Deploy**로 다시 배포해주세요.
+
+### 주소로 검색하기
+
+지도 위에 검색창이 있어서, 지점 이름이나 주소로 검색하면 그 지점으로 지도가 이동하고
+목록에서도 안 맞는 지점은 걸러집니다. 카드 목록에도 각 지점의 주소가 표시됩니다.
+이걸 켜려면 주소 컴럼을 추가하고 데모용 주소를 넣어주세요.
+
+```sql
+alter table chargers add column if not exists address text;
+
+update chargers set address = '서울 강남구 강남대로 396' where id in ('CP-1', 'CP-4');
+update chargers set address = '서울 마포구 양화로 160' where id = 'CP-2';
+update chargers set address = '서울 영등포구 여의공원로 68' where id = 'CP-3';
+update chargers set address = '서울 서대문구 신촌로 83' where id = 'CP-5';
+```
 
 ### (선택) 터미널로 자동 시뮬레이션
 
@@ -124,10 +139,10 @@ npm run simulate:web
 실시간으로 반영하는 핵심 동작 원리.
 
 **보여주지 않는 것(다음 단계에서 채울 부분)**:
-- 여러 업체/여러 지점을 구분해서 관리하는 기능
 - 사용자 로그인, 권한 관리
 - 정부 공공데이터 API로 상태를 자동 제출하는 연동
 - 실제 충전기 하드웨어와의 연결 (지금은 시뮬레이터로 대체)
+- 여러 업체를 구분해서 관리하는 기능(멀티테난트)
 
 즉 이건 "이런 방식으로 작동합니다"를 보여주는 개념 증명(PoC)이고,
 실제 서비스로 가려면 위 항목들을 채워 넣는 작업이 추가로 필요합니다.
