@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>충전기 사업 로드맵</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@500;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --bg:#EEF1F5;
+    --surface:#FFFFFF;
+    --surface-2:#F5F7FA;
+    --ink:#161A22;
+    --ink-soft:#5B6472;
+    --line:#D7DDE6;
+    --accent:#1D5FD6;
+    --accent-soft:#DEEAFC;
+    --accent-border:#9FBFEF;
+    --now:#C96A12;
+    --now-soft:#FBEBDA;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#12151C;
+      --surface:#1A1E27;
+      --surface-2:#20242F;
+      --ink:#E7EAF0;
+      --ink-soft:#9AA3B2;
+      --line:#2E3341;
+      --accent:#6FA3F5;
+      --accent-soft:#1E2C42;
+      --accent-border:#3E5F94;
+      --now:#F0A24E;
+      --now-soft:#3A2A16;
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html, body{ margin:0; padding:0; }
+
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;
+    padding-inline:20px;
+    padding-block:44px;
+  }
+
+  .page{
+    max-width:880px;
+    margin-inline:auto;
+    display:flex;
+    flex-direction:column;
+    gap:48px;
+  }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono',ui-monospace,monospace;
+    font-size:12px;
+    letter-spacing:0.12em;
+    color:var(--accent);
+    font-weight:600;
+    text-transform:uppercase;
+  }
+
+  h1{
+    font-family:'IBM Plex Sans KR','Noto Sans KR',sans-serif;
+    font-weight:700;
+    font-size:clamp(26px,5vw,36px);
+    line-height:1.3;
+    margin:10px 0 12px;
+    text-wrap:balance;
+  }
+
+  .subtitle{
+    color:var(--ink-soft);
+    font-size:15.5px;
+    line-height:1.7;
+    max-width:64ch;
+  }
+
+  h2{
+    font-family:'IBM Plex Sans KR','Noto Sans KR',sans-serif;
+    font-weight:700;
+    font-size:20px;
+    margin:0 0 6px;
+  }
+
+  .section-lede{
+    color:var(--ink-soft);
+    font-size:14px;
+    line-height:1.7;
+    max-width:62ch;
+    margin:0 0 20px;
+  }
+
+  .roadmap{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:stretch;
+  }
+  .step{
+    flex:1 1 190px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:16px;
+    position:relative;
+  }
+  .step.now{
+    border-color:var(--now);
+    background:var(--now-soft);
+  }
+  .step-num{
+    font-family:'IBM Plex Mono',ui-monospace,monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+  .step.now .step-num{ color:var(--now); font-weight:700; }
+  .step-title{
+    font-weight:700;
+    font-size:15px;
+    margin-bottom:6px;
+  }
+  .step-desc{
+    font-size:13px;
+    color:var(--ink-soft);
+    line-height:1.55;
+  }
+  .now-badge{
+    display:inline-block;
+    margin-top:10px;
+    font-family:'IBM Plex Mono',ui-monospace,monospace;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.04em;
+    color:var(--now);
+    background:var(--surface);
+    border:1px solid var(--now);
+    border-radius:999px;
+    padding:2px 8px;
+  }
+  .arrow{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink-soft);
+    font-size:18px;
+    padding:0 2px;
+    flex:0 0 auto;
+  }
+  @media (max-width:700px){
+    .arrow{ transform:rotate(90deg); padding:4px 0; }
+  }
+
+  .diagram-frame{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+    overflow-x:auto;
+  }
+  svg.diagram{ display:block; width:100%; height:auto; color:var(--ink); }
+  figure{ margin:0; }
+  figcaption{
+    margin-top:10px;
+    font-size:13px;
+    color:var(--ink-soft);
+    line-height:1.6;
+  }
+  .diagram-stack{
+    display:flex;
+    flex-direction:column;
+    gap:24px;
+  }
+
+  .demo-card{
+    background:var(--accent-soft);
+    border:1px solid var(--accent-border);
+    border-radius:14px;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .demo-card .t{ font-weight:700; font-size:16px; }
+  .demo-card .d{ font-size:13.5px; color:var(--ink-soft); line-height:1.6; }
+  .demo-link{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-weight:700;
+    font-size:14px;
+    color:var(--accent);
+    text-decoration:none;
+    width:fit-content;
+  }
+  .demo-link:hover{ text-decoration:underline; }
+
+  .checklist{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .checklist li{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    font-size:14px;
+    line-height:1.6;
+  }
+  .checklist .dot{
+    flex:none;
+    width:6px; height:6px;
+    border-radius:50%;
+    background:var(--accent);
+    margin-top:8px;
+  }
+  .checklist b{ font-weight:700; }
+  .checklist span.d{ color:var(--ink-soft); }
+
+  .caution{
+    display:flex;
+    gap:12px;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:14px 16px;
+    font-size:13.5px;
+    color:var(--ink-soft);
+    line-height:1.65;
+  }
+  .caution b{ color:var(--ink); }
+
+  footer{
+    border-top:1px solid var(--line);
+    padding-top:18px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.7;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="eyebrow">사업 진행 정리</div>
+    <h1>충전기 사업, 지금 어디까지 왔나</h1>
+    <p class="subtitle">지금까지 대화에서 나온 걸 한 장으로 정리했다. 지금 만든 건 전부 "데모"이고,
+    실제로 여러 업체를 받는 서비스는 이후 단계에서 다시 설계한다.</p>
+  </header>
+
+  <section>
+    <h2>전체 로드맵</h2>
+    <p class="section-lede">4단계로 간다. 지금은 1단계, 데모를 만들어서 보여주는 단계다.</p>
+    <div class="roadmap">
+      <div class="step now">
+        <div class="step-num">01</div>
+        <div class="step-title">데모</div>
+        <div class="step-desc">충전기 상태가 바뀌면 화면에 바로 반영되는 걸 보여주는 시연용 사이트 하나 완성.</div>
+        <span class="now-badge">지금 여기</span>
+      </div>
+      <div class="arrow">▸</div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">파일럿(B2B)</div>
+        <div class="step-desc">지인·공공기관에 데모 보여주고 반응 확인. 실제 중소업체 1~2곳에 저렴하게 OCPP 연동 대행.</div>
+      </div>
+      <div class="arrow">▸</div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">데이터 자산화</div>
+        <div class="step-desc">연동된 업체 수가 늘면서, 큰 지도 앱엔 없는 중소 충전기 실시간 상태 데이터가 쌓임.</div>
+      </div>
+      <div class="arrow">▸</div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-title">확장</div>
+        <div class="step-desc">쌓인 데이터로 자체 소비자 앱을 내거나, 네이버맵 등에 데이터를 공급(B2B2B).</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>지금 데모 vs 나중에 만들 실제 서비스</h2>
+    <p class="section-lede">"업체마다 이걸 다 만들어야 하나?"에 대한 답. 구조 자체가 다르다.</p>
+
+    <div class="diagram-stack">
+      <figure>
+        <div class="diagram-frame">
+          <svg class="diagram" viewBox="0 0 640 190" role="img" aria-label="지금 데모 구조: 저장소와 Supabase 프로젝트 하나 안에 충전기 3대가 회사 구분 없이 그대로 들어있음">
+            <rect x="40" y="30" width="560" height="120" rx="14" fill="var(--surface-2)" stroke="currentColor" stroke-width="2"/>
+            <text x="320" y="20" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">데모용 저장소 + Supabase 프로젝트 (1개)</text>
+            <g font-family="'IBM Plex Mono',monospace" font-size="13" font-weight="600" text-anchor="middle">
+              <rect x="90" y="70" width="110" height="40" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+              <text x="145" y="95" fill="currentColor">CP-1</text>
+              <rect x="265" y="70" width="110" height="40" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+              <text x="320" y="95" fill="currentColor">CP-2</text>
+              <rect x="440" y="70" width="110" height="40" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+              <text x="495" y="95" fill="currentColor">CP-3</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>지금 데모: 충전기 3대가 회사 구분 없이 하나의 박스 안에 하드코딩되어 있다.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="diagram-frame">
+          <svg class="diagram" viewBox="0 0 640 260" role="img" aria-label="실제 서비스 구조: 공유 서버 하나가 company_id로 구분해서 A업체, B업체, C업체 각각의 충전기 그룹과 연결됨">
+            <rect x="20" y="95" width="150" height="70" rx="12" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>
+            <text x="95" y="125" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">공유 서버</text>
+            <text x="95" y="143" text-anchor="middle" font-size="11" fill="var(--ink-soft)">(DB 1개)</text>
+
+            <line x1="170" y1="120" x2="250" y2="45" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="170" y1="130" x2="250" y2="130" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="170" y1="140" x2="250" y2="215" stroke="currentColor" stroke-width="1.5"/>
+
+            <text x="200" y="70" font-family="'IBM Plex Mono',monospace" font-size="10.5" fill="var(--ink-soft)">company_id=A</text>
+            <text x="200" y="122" font-family="'IBM Plex Mono',monospace" font-size="10.5" fill="var(--ink-soft)">company_id=B</text>
+            <text x="200" y="195" font-family="'IBM Plex Mono',monospace" font-size="10.5" fill="var(--ink-soft)">company_id=C</text>
+
+            <g font-size="12.5" font-weight="700" text-anchor="middle">
+              <rect x="250" y="15" width="180" height="60" rx="10" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.5"/>
+              <text x="340" y="35" fill="currentColor">A업체</text>
+              <rect x="266" y="45" width="60" height="22" rx="5" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
+              <text x="296" y="60" font-family="'IBM Plex Mono',monospace" font-size="10.5" fill="currentColor">CP-1</text>
+              <rect x="334" y="45" width="60" height="22" rx="5" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
+              <text x="364" y="60" font-family="'IBM Plex Mono',monospace" font-size="10.5" fill="currentColor">CP-2</text>
+
+              <rect x="250" y="100" width="180" height="60" rx="10" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.5"/>
+              <text x="340" y="120" fill="currentColor">B업체</text>
+              <rect x="300" y="130" width="60" height="22" rx="5" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
+              <text x="330" y="145" font-family="'IBM Plex Mono',monospace" font-size="10.5" fill="currentColor">CP-9</text>
+
+              <rect x="250" y="185" width="180" height="60" rx="10" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.5"/>
+              <text x="340" y="205" fill="currentColor">C업체</text>
+              <rect x="256" y="215" width="60" height="22" rx="5" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
+              <text x="286" y="230" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor">CP-14</text>
+              <rect x="324" y="215" width="60" height="22" rx="5" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
+              <text x="354" y="230" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor">CP-15</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>실제 서비스: 서버는 하나만 계속 운영하고, 새 업체가 들어오면 company_id 하나만 늘어난다. 저장소나 프로젝트를 새로 만들 필요가 없다.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>지금 완성된 데모</h2>
+    <div class="demo-card">
+      <div class="t">전기차 충전기 실시간 상태 (웹 버전)</div>
+      <div class="d">카드의 버튼을 누르면 그 자리에서 바로 정상/고장 상태가 바뀐다. 설치나 로그인 없이 링크만 열면 된다.</div>
+      <a class="demo-link" href="https://ppelo1.github.io/ev-charger-status-demo/">ppelo1.github.io/ev-charger-status-demo →</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>잊지 말아야 할 것</h2>
+    <ul class="checklist">
+      <li><span class="dot"></span><div><b>공공기관 영업은 순서가 있다.</b> <span class="d">나라장터 등록 → (가능하면) 혁신제품/벤처 인증 → 소규모 실증사업으로 레퍼런스 확보 → 본 계약. 예산 주기 때문에 최소 6개월~1년 리드타임.</span></div></li>
+      <li><span class="dot"></span><div><b>지인은 정보원이지 결정권자가 아니다.</b> <span class="d">담당 부서·예산 시기 파악, 담당자 소개 정도로 활용. 식사·선물 등은 청탁금지법 문제가 될 수 있음.</span></div></li>
+      <li><span class="dot"></span><div><b>OCPP 미지원 구형 장비.</b> <span class="d">펌웨어 업데이트로 해결 → 안 되면 릴레이/Modbus 신호를 게이트웨이로 중계 → 그래도 안 되면 업체 동의하에 물리 센서 부착(유료 애드온).</span></div></li>
+    </ul>
+  </section>
+
+  <div class="caution">
+    <div><b>이 페이지 자체에 대해:</b> 지금 만든 데모는 충전기 3대·업체 구분 없음으로 고정된 시연용이다. 파일럿 단계로 넘어갈 때는 이 코드를 확장하는 게 아니라, company_id 기반의 공유 구조로 다시 설계해야 한다.</div>
+  </div>
+
+  <footer>
+    대화 중 나온 휴지 재생지 아이디어는 이 로드맵과 무관한 별개의 주제라 여기엔 포함하지 않았다.
+  </footer>
+
+</div>
+</body>
+</html>
