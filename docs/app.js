@@ -40,8 +40,14 @@ function statusMeta(status) {
   }
 }
 
+// 그룹 짓는 키는 고유 site_id로 한다 — 이름은 사람이 붙이는 라벨이라 서로 다른
+// 지점이 우연히 같은 이름을 쓸 수 있어서, 이름 자체를 키로 쓰면 안 된다.
 function siteKey(charger) {
-  return charger.site_name || '위치 미등록';
+  return charger.site_id || charger.id;
+}
+
+function siteLabel(charger) {
+  return charger?.site_name || '위치 미등록';
 }
 
 function getChargersForSite(site) {
@@ -98,7 +104,7 @@ async function setStatus(id, status, button) {
 
 function renderCard(charger) {
   const group = getOrCreateSiteGroup(siteKey(charger));
-  group.title.textContent = siteKey(charger);
+  group.title.textContent = siteLabel(charger);
   if (charger.address) group.address.textContent = charger.address;
 
   let card = cardEls.get(charger.id);
@@ -133,6 +139,7 @@ function renderSiteMarker(site) {
   const withLoc = chargersInSite.find((c) => c.lat != null && c.lng != null);
   if (!withLoc) return;
 
+  const label = siteLabel(chargersInSite[0]);
   const meta = aggregateMeta(chargersInSite);
   const group = siteGroupEls.get(site);
   if (group) {
@@ -154,7 +161,7 @@ function renderSiteMarker(site) {
     markerCluster.addLayer(marker);
   }
   marker.setStyle({ fillColor: meta.color });
-  marker.bindPopup(`<b>${site}</b><br>${popupRows}`);
+  marker.bindPopup(`<b>${label}</b><br>${popupRows}`);
 }
 
 function upsertChargerLocal(charger) {
@@ -170,8 +177,9 @@ function applySearch(query) {
 
   siteGroupEls.forEach((group, site) => {
     const chargersInSite = getChargersForSite(site);
+    const label = siteLabel(chargersInSite[0]).toLowerCase();
     const address = (chargersInSite[0]?.address || '').toLowerCase();
-    const matches = !q || site.toLowerCase().includes(q) || address.includes(q);
+    const matches = !q || label.includes(q) || address.includes(q);
     group.section.style.display = matches ? '' : 'none';
     if (matches) {
       const withLoc = chargersInSite.find((c) => c.lat != null && c.lng != null);

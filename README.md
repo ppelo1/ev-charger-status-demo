@@ -111,7 +111,7 @@ CP-4, CP-5도 버튼으로 상태를 바꿀 수 있게 하려면, `supabase/func
 
 지도 위에 검색창이 있어서, 지점 이름이나 주소로 검색하면 그 지점으로 지도가 이동하고
 목록에서도 안 맞는 지점은 걸러집니다. 카드 목록에도 각 지점의 주소가 표시됩니다.
-이걸 켜려면 주소 컴럼을 추가하고 데모용 주소를 넣어주세요.
+이걸 켜려면 주소 컬럼을 추가하고 데모용 주소를 넣어주세요.
 
 ```sql
 alter table chargers add column if not exists address text;
@@ -121,6 +121,24 @@ update chargers set address = '서울 마포구 양화로 160' where id = 'CP-2'
 update chargers set address = '서울 영등포구 여의공원로 68' where id = 'CP-3';
 update chargers set address = '서울 서대문구 신촌로 83' where id = 'CP-5';
 ```
+
+### 지점 구분은 이름이 아니라 고유 ID로
+
+처음엔 지점을 `site_name`(이름)으로 묶었는데, 이건 서로 다른 두 지점이 우연히 같은 이름을
+쓰면 하나로 합쳐져 버리는 문제가 있습니다. 그래서 그룹을 짓는 진짜 키는 `site_id`(고유 값)로
+바꾸고, `site_name`은 화면에 보여주는 이름표로만 쓰도록 코드를 고쳤습니다. 이걸 켜려면:
+
+```sql
+alter table chargers add column if not exists site_id text;
+
+update chargers set site_id = 'gangnam-station' where id in ('CP-1', 'CP-4');
+update chargers set site_id = 'hongdae-station' where id = 'CP-2';
+update chargers set site_id = 'yeouido-station' where id = 'CP-3';
+update chargers set site_id = 'sinchon-station' where id = 'CP-5';
+```
+
+(`site_id`가 비어 있는 충전기는 각자 자기 자신을 하나의 지점으로 취급하니, 기존 데이터가
+당장 깨지진 않습니다. 다만 지점별로 묶어 보려면 위 SQL로 채워주는 게 맞습니다.)
 
 ### (선택) 터미널로 자동 시뮬레이션
 
