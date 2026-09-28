@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// anon 키는 공개되어도 안전하도록 설계된 키입니다(RLS로 읽기만 허용).
+// anon 키는 공개되어도 안전하도록 설계된 키입니다(RLS로 접근 범위를 제한).
 const SUPABASE_URL = 'https://aopqdrdzpeguxwyzvssp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvcHFkcmR6cGVndXh3eXp2c3NwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NzQ5NDcsImV4cCI6MjEwNjE1MDk0N30.gqzc7dwTEGbn1SLoWd4ZVQ72V865GvDJK1LMXZnl57Q';
 
@@ -27,6 +27,14 @@ function statusMeta(status) {
   }
 }
 
+async function setStatus(id, status, button) {
+  button.disabled = true;
+  // 테이블에 직접 쓰지 않고, 서버 쪽 Edge Function을 통해서만 상태를 바꿉니다.
+  const { error } = await supabase.functions.invoke('set-charger-status', { body: { id, status } });
+  button.disabled = false;
+  if (error) alert(`상태 변경 실패: ${error.message}`);
+}
+
 function renderCard(charger) {
   let card = cards.get(charger.id);
   if (!card) {
@@ -36,9 +44,16 @@ function renderCard(charger) {
       <div class="card-id"></div>
       <div class="card-status"></div>
       <div class="card-meta"></div>
+      <div class="card-actions">
+        <button type="button" class="btn btn-fault">고장으로 전환</button>
+        <button type="button" class="btn btn-ok">정상으로 복귀</button>
+      </div>
     `;
     cardsEl.appendChild(card);
     cards.set(charger.id, card);
+
+    card.querySelector('.btn-fault').addEventListener('click', (e) => setStatus(charger.id, 'Faulted', e.currentTarget));
+    card.querySelector('.btn-ok').addEventListener('click', (e) => setStatus(charger.id, 'Available', e.currentTarget));
   }
   const meta = statusMeta(charger.status);
   card.className = `card ${meta.cls}`;
@@ -55,7 +70,7 @@ async function loadInitial() {
     return;
   }
   data.forEach(renderCard);
-  connStatusEl.textContent = `실시간 연결됨 — 충전기 ${data.length}대 표시 중`;
+  connStatusEl.textContent = `실시간 연결됨 — 충전기 ${data.length}대 표시 중. 카드의 버튼으로 직접 상태를 바꿔보세요.`;
 }
 
 function subscribeRealtime() {
@@ -66,7 +81,7 @@ function subscribeRealtime() {
     })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        connStatusEl.textContent = '실시간 연결됨 — 상태 변경이 즉시 반영됩니다';
+        connStatusEl.textContent = '실시간 연결됨 — 카드의 버튼으로 직접 상태를 바꿔보세요.';
       }
     });
 }

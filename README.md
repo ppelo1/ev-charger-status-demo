@@ -45,19 +45,36 @@ npm run simulate
 
 ## 웹 공유 버전 (URL로 보여주기)
 
-Supabase 프로젝트를 만들고 `.env.example`을 참고해 `.env` 파일에 키 값을 채운 뒤:
+`https://ppelo1.github.io/ev-charger-status-demo/` 페이지를 열면 충전기 카드가 보이고,
+**각 카드의 "고장으로 전환" / "정상으로 복귀" 버튼을 누르면 그 자리에서 바로 상태가 바뀝니다.**
+git clone도, npm도, 터미널도 필요 없습니다 — 브라우저만 있으면 됩니다.
 
-```bash
-npm install
-npm run simulate:web
-```
+테이블 자체는 계속 읽기 전용으로 잠겨 있고, 실제 쓰기는 `supabase/functions/set-charger-status`
+라는 서버 쪽 함수 안에서만 일어납니다(브라우저에 쓰기 권한을 열어주지 않는 방식). 이 함수를
+Supabase에 한 번 배포해야 버튼이 동작합니다.
 
-이렇게 하면 이 컴퓨터에서 Supabase로 상태를 계속 보내고, GitHub Pages에 올라간
-`docs/index.html`을 누구든 열어보면 실시간으로 같이 반영됩니다. 로컬 OCPP 버전과 마찬가지로
-`CP-1 fault` / `CP-1 ok` 명령으로 라이브 시연이 가능합니다.
+**Edge Function 배포 방법 (대시보드에서, 터미널 없이)**
+1. Supabase 대시보드 왼쪽 메뉴 **Edge Functions** → **Deploy a new function**
+2. 함수 이름: `set-charger-status`
+3. `supabase/functions/set-charger-status/index.ts` 파일 내용을 그대로 복사해서 에디터에 붙여넣기
+4. **Deploy** 클릭
+
+(`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`는 Supabase가 함수 실행 환경에 자동으로 넣어주므로
+별도로 설정할 필요가 없습니다.)
 
 GitHub Pages 활성화 방법: 저장소 **Settings → Pages → Source: Deploy from a branch →
 Branch: main, Folder: /docs → Save**.
+
+### (선택) 터미널로 자동 시뮬레이션
+
+버튼 클릭 대신, 충전기가 스스로 주기적으로 상태를 보고하는 모습까지 보여주고 싶다면
+`simulator-supabase.js`로 자동 시뮬레이션도 가능합니다:
+
+```bash
+npm install
+cp .env.example .env   # SUPABASE_SERVICE_ROLE_KEY 채우기
+npm run simulate:web
+```
 
 ## 이 데모가 보여주는 것 / 보여주지 않는 것
 

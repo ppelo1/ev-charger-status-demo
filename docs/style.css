@@ -62,4 +62,37 @@ main#cards {
 .card-meta {
   font-size: 12px;
   color: #666;
+  margin-bottom: 12px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-fault {
+  background: #fdf1ef;
+  border-color: #e3aa9f;
+  color: #c0392b;
+}
+
+.btn-ok {
+  background: #eaf5ef;
+  border-color: #a9d3bb;
+  color: #2f8f5b;
 }
