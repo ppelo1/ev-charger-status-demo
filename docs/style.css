@@ -24,6 +24,12 @@ header h1 {
   color: #b7c9bf;
 }
 
+#map {
+  height: 320px;
+  width: 100%;
+  margin: 0;
+}
+
 main#cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

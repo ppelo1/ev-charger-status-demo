@@ -9,21 +9,28 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const cardsEl = document.getElementById('cards');
 const connStatusEl = document.getElementById('conn-status');
 const cards = new Map();
+const markers = new Map();
+
+const map = L.map('map', { scrollWheelZoom: false }).setView([37.52, 127.0], 11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+  maxZoom: 19,
+}).addTo(map);
 
 function statusMeta(status) {
   switch (status) {
     case 'Available':
-      return { label: '정상 대기', cls: 'ok' };
+      return { label: '정상 대기', cls: 'ok', color: '#2f8f5b' };
     case 'Charging':
-      return { label: '충전 중', cls: 'ok' };
+      return { label: '충전 중', cls: 'ok', color: '#2f8f5b' };
     case 'Faulted':
-      return { label: '고장', cls: 'fault' };
+      return { label: '고장', cls: 'fault', color: '#c0392b' };
     case 'Unavailable':
-      return { label: '사용 불가', cls: 'fault' };
+      return { label: '사용 불가', cls: 'fault', color: '#c0392b' };
     case 'Offline':
-      return { label: '통신 두절', cls: 'offline' };
+      return { label: '통신 두절', cls: 'offline', color: '#9a9a90' };
     default:
-      return { label: '알 수 없음', cls: 'offline' };
+      return { label: '알 수 없음', cls: 'offline', color: '#9a9a90' };
   }
 }
 
@@ -57,10 +64,28 @@ function renderCard(charger) {
   }
   const meta = statusMeta(charger.status);
   card.className = `card ${meta.cls}`;
-  card.querySelector('.card-id').textContent = charger.id;
+  card.querySelector('.card-id').textContent = charger.site_name ? `${charger.site_name} (${charger.id})` : charger.id;
   card.querySelector('.card-status').textContent = meta.label;
   const time = charger.last_seen ? new Date(charger.last_seen).toLocaleTimeString('ko-KR') : '-';
   card.querySelector('.card-meta').textContent = `${charger.vendor || '미확인'} · 마지막 신호 ${time}`;
+}
+
+function renderMarker(charger) {
+  if (charger.lat == null || charger.lng == null) return;
+  const meta = statusMeta(charger.status);
+  const label = charger.site_name ? `${charger.site_name} (${charger.id})` : charger.id;
+  let marker = markers.get(charger.id);
+  if (!marker) {
+    marker = L.circleMarker([charger.lat, charger.lng], {
+      radius: 11,
+      weight: 2,
+      color: '#fff',
+      fillOpacity: 1,
+    }).addTo(map);
+    markers.set(charger.id, marker);
+  }
+  marker.setStyle({ fillColor: meta.color });
+  marker.bindPopup(`<b>${label}</b><br>${meta.label}`);
 }
 
 async function loadInitial() {
@@ -69,7 +94,14 @@ async function loadInitial() {
     connStatusEl.textContent = `데이터를 불러오지 못했습니다: ${error.message}`;
     return;
   }
-  data.forEach(renderCard);
+  data.forEach((charger) => {
+    renderCard(charger);
+    renderMarker(charger);
+  });
+  const withLocation = data.filter((c) => c.lat != null && c.lng != null);
+  if (withLocation.length) {
+    map.fitBounds(withLocation.map((c) => [c.lat, c.lng]), { padding: [30, 30], maxZoom: 13 });
+  }
   connStatusEl.textContent = `실시간 연결됨 — 충전기 ${data.length}대 표시 중. 카드의 버튼으로 직접 상태를 바꿔보세요.`;
 }
 
@@ -77,7 +109,10 @@ function subscribeRealtime() {
   supabase
     .channel('chargers-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chargers' }, (payload) => {
-      if (payload.new) renderCard(payload.new);
+      if (payload.new) {
+        renderCard(payload.new);
+        renderMarker(payload.new);
+      }
     })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {

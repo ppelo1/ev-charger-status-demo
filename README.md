@@ -65,6 +65,23 @@ Supabase에 한 번 배포해야 버튼이 동작합니다.
 GitHub Pages 활성화 방법: 저장소 **Settings → Pages → Source: Deploy from a branch →
 Branch: main, Folder: /docs → Save**.
 
+### 지도에 위치 표시하기
+
+카드 목록 위에 지도가 뜨고, 충전기 위치에 상태별 색깔로 핀이 찍힙니다. 이걸 켜려면
+Supabase SQL Editor에서 아래를 한 번 실행해서 위치 컬럼을 추가하고 데모용 좌표를 넣어주세요.
+
+```sql
+alter table chargers add column if not exists site_name text;
+alter table chargers add column if not exists lat double precision;
+alter table chargers add column if not exists lng double precision;
+
+update chargers set site_name = '강남역 충전소', lat = 37.4979, lng = 127.0276 where id = 'CP-1';
+update chargers set site_name = '홍대입구 충전소', lat = 37.5563, lng = 126.9236 where id = 'CP-2';
+update chargers set site_name = '여의도 충전소', lat = 37.5219, lng = 126.9245 where id = 'CP-3';
+```
+
+지도는 별도 API 키 없이 쓸 수 있는 OpenStreetMap 기반이라 추가 가입 없이 바로 동작합니다.
+
 ### (선택) 터미널로 자동 시뮬레이션
 
 버튼 클릭 대신, 충전기가 스스로 주기적으로 상태를 보고하는 모습까지 보여주고 싶다면
