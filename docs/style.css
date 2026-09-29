@@ -48,6 +48,63 @@ header h1 {
   margin: 16px 0 0;
 }
 
+.admin-panel {
+  padding: 16px 32px 0;
+}
+
+.admin-toggle-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px dashed #b9b9b0;
+  border-radius: 8px;
+  background: none;
+  color: #555;
+  cursor: pointer;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e2e2da;
+  border-radius: 10px;
+  max-width: 360px;
+}
+
+.admin-form input,
+.admin-form select {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13.5px;
+  border: 1px solid #d8d8d2;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.admin-site-mode {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  color: #444;
+  margin: 4px 0;
+}
+
+#af-new-site-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-status {
+  margin: 0;
+  font-size: 12.5px;
+  color: #666;
+}
+
 main#cards {
   display: flex;
   flex-direction: column;

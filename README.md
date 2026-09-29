@@ -126,9 +126,27 @@ values
 on conflict (id) do nothing;
 ```
 
-이 두 대도 버튼으로 상태를 바꾸려면 `supabase/functions/set-charger-status/index.ts`의
-`ALLOWED_IDS`에 이미 포함되어 있으니, Supabase 대시보드에서 **Edge Functions →
-set-charger-status → 코드 편집 → 새 내용 붙여넣기 → Deploy**로 다시 배포해주세요.)
+이 두 대도 버튼으로 상태를 바꿀 수 있습니다 — `set-charger-status` 함수는 이제 하드코딩된
+ID 목록이 아니라 "그 충전기가 실제로 존재하는지"만 확인하기 때문에, 새 충전기를 추가해도
+이 함수를 다시 배포할 필요가 없습니다.)
+
+### SQL 없이 브라우저에서 충전기/지점 추가하기
+
+페이지의 **"+ 충전기 추가"** 버튼을 누르면 폼이 열리고, 여기서 충전기 ID와 (기존 지점 선택
+또는 새 지점 이름·주소·좌표)를 입력해서 추가할 수 있습니다. SQL Editor나 Table Editor를 열
+필요가 없습니다.
+
+이건 `add-charger`라는 새 Edge Function이 처리합니다. 아무나 누르고 마음대로 데이터를
+채워 넣지 못하도록, 폼에 입력하는 **관리자 PIN**을 서버에서 확인합니다.
+
+**1) PIN 설정** (한 번만): Supabase 대시보드 **Project Settings → Edge Functions →
+Secrets**(또는 Manage secrets)에서 이름 `ADMIN_PIN`, 값은 원하는 숫자/문자열(예: `1234`)로
+추가.
+
+**2) 함수 배포**: **Edge Functions → Deploy a new function** → 이름 `add-charger` →
+`supabase/functions/add-charger/index.ts` 내용을 그대로 붙여넣고 **Deploy**.
+
+이후 페이지에서 "+ 충전기 추가"를 눌러 PIN과 정보를 입력하면 바로 등록됩니다.
 
 ### (선택) 터미널로 자동 시뮬레이션
 

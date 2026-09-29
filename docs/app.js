@@ -14,6 +14,13 @@ const chargersById = new Map(); // id -> row
 const siteGroupEls = new Map(); // siteName -> { section, title, badge, cardsWrap }
 const cardEls = new Map(); // id -> card element
 const siteMarkers = new Map(); // siteName -> marker
+const knownSites = new Map(); // site_id -> site_name (충전기 추가 폼의 지점 목록용)
+
+const adminToggle = document.getElementById('admin-toggle');
+const addChargerForm = document.getElementById('add-charger-form');
+const afStatus = document.getElementById('af-status');
+const afSiteSelect = document.getElementById('af-site-select');
+const afNewSiteFields = document.getElementById('af-new-site-fields');
 
 const map = L.map('map', { scrollWheelZoom: false }).setView([37.52, 127.0], 11);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -171,6 +178,7 @@ function upsertChargerLocal(partial) {
   const prev = chargersById.get(partial.id) || {};
   const charger = { ...prev, ...partial };
   chargersById.set(charger.id, charger);
+  if (charger.site_id) knownSites.set(charger.site_id, siteLabel(charger));
   renderCard(charger);
   renderSiteMarker(siteKey(charger));
 }
@@ -239,6 +247,75 @@ function subscribeRealtime() {
       }
     });
 }
+
+// "+ 충전기 추가" 패널 — SQL Editor 없이 브라우저에서 바로 충전기/지점을 등록합니다.
+function refreshSiteOptions() {
+  afSiteSelect.innerHTML = '';
+  knownSites.forEach((label, id) => {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = label;
+    afSiteSelect.appendChild(opt);
+  });
+}
+
+adminToggle.addEventListener('click', () => {
+  if (addChargerForm.hasAttribute('hidden')) {
+    refreshSiteOptions();
+    addChargerForm.removeAttribute('hidden');
+  } else {
+    addChargerForm.setAttribute('hidden', '');
+  }
+});
+
+addChargerForm.querySelectorAll('input[name="site-mode"]').forEach((radio) => {
+  radio.addEventListener('change', () => {
+    const isNew = addChargerForm.querySelector('input[name="site-mode"]:checked').value === 'new';
+    afSiteSelect.hidden = isNew;
+    afNewSiteFields.hidden = !isNew;
+  });
+});
+
+addChargerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const chargerId = document.getElementById('af-id').value.trim();
+  if (!chargerId) {
+    afStatus.textContent = '충전기 ID를 입력하세요.';
+    return;
+  }
+
+  const siteMode = addChargerForm.querySelector('input[name="site-mode"]:checked').value;
+  const body = {
+    pin: document.getElementById('af-pin').value,
+    chargerId,
+    vendor: document.getElementById('af-vendor').value.trim(),
+    model: document.getElementById('af-model').value.trim(),
+  };
+
+  if (siteMode === 'existing') {
+    body.siteId = afSiteSelect.value || null;
+  } else {
+    body.newSite = {
+      name: document.getElementById('af-site-name').value.trim(),
+      address: document.getElementById('af-site-address').value.trim(),
+      lat: parseFloat(document.getElementById('af-site-lat').value),
+      lng: parseFloat(document.getElementById('af-site-lng').value),
+    };
+  }
+
+  afStatus.textContent = '추가하는 중...';
+  const { data, error } = await supabase.functions.invoke('add-charger', { body });
+
+  if (error || data?.error) {
+    afStatus.textContent = `실패: ${data?.error || error.message}`;
+    return;
+  }
+
+  afStatus.textContent = '추가됐습니다.';
+  addChargerForm.reset();
+  loadInitial();
+});
 
 loadInitial();
 subscribeRealtime();

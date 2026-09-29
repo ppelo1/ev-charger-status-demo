@@ -18,6 +18,34 @@
     <input id="search-input" type="text" placeholder="지점 이름이나 주소로 검색" autocomplete="off">
   </div>
   <div id="map"></div>
+
+  <div class="admin-panel">
+    <button id="admin-toggle" type="button" class="admin-toggle-btn">+ 충전기 추가</button>
+    <form id="add-charger-form" class="admin-form" hidden>
+      <input id="af-pin" type="password" placeholder="관리자 PIN" autocomplete="off">
+      <input id="af-id" type="text" placeholder="충전기 ID (예: CP-7)" autocomplete="off">
+      <input id="af-vendor" type="text" placeholder="제조사 (선택, 비우면 DemoVendor)" autocomplete="off">
+      <input id="af-model" type="text" placeholder="모델 (선택, 비우면 DC-50kW)" autocomplete="off">
+
+      <div class="admin-site-mode">
+        <label><input type="radio" name="site-mode" value="existing" checked> 기존 지점에 추가</label>
+        <label><input type="radio" name="site-mode" value="new"> 새 지점 만들기</label>
+      </div>
+
+      <select id="af-site-select"></select>
+
+      <div id="af-new-site-fields" hidden>
+        <input id="af-site-name" type="text" placeholder="지점 이름" autocomplete="off">
+        <input id="af-site-address" type="text" placeholder="주소" autocomplete="off">
+        <input id="af-site-lat" type="text" placeholder="위도 (예: 37.4979)" autocomplete="off">
+        <input id="af-site-lng" type="text" placeholder="경도 (예: 127.0276)" autocomplete="off">
+      </div>
+
+      <button type="submit" class="btn btn-ok">추가</button>
+      <p id="af-status" class="admin-status"></p>
+    </form>
+  </div>
+
   <main id="cards"></main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
