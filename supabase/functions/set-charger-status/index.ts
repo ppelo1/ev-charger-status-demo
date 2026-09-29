@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // 버튼에서 바꿀 수 있는 값을 딱 이만큼으로만 제한합니다.
 // (테이블 자체는 계속 읽기 전용으로 잠가두고, 쓰기는 이 함수 안에서만 일어납니다.)
-const ALLOWED_IDS = ['CP-1', 'CP-2', 'CP-3', 'CP-4', 'CP-5'];
+const ALLOWED_IDS = ['CP-1', 'CP-2', 'CP-3', 'CP-4', 'CP-5', 'CP-6'];
 const ALLOWED_STATUS = ['Available', 'Faulted'];
 
 const corsHeaders = {
