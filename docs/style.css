@@ -105,6 +105,12 @@ header h1 {
   color: #666;
 }
 
+.admin-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #888;
+}
+
 main#cards {
   display: flex;
   flex-direction: column;

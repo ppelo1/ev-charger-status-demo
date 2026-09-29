@@ -251,6 +251,17 @@ function subscribeRealtime() {
     });
 }
 
+// 주소 문자열을 위도/경도로 바꿉니다. 지도와 같은 OpenStreetMap 계열(Nominatim)이라
+// 별도 API 키가 필요 없습니다.
+async function geocodeAddress(address) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('위치 검색 서버에 연결하지 못했습니다.');
+  const results = await res.json();
+  if (!results.length) return null;
+  return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+}
+
 // "+ 충전기 추가" 패널 — SQL Editor 없이 브라우저에서 바로 충전기/지점을 등록합니다.
 function refreshSiteOptions() {
   afSiteSelect.innerHTML = '';
@@ -299,12 +310,27 @@ addChargerForm.addEventListener('submit', async (e) => {
   if (siteMode === 'existing') {
     body.siteId = afSiteSelect.value || null;
   } else {
-    body.newSite = {
-      name: document.getElementById('af-site-name').value.trim(),
-      address: document.getElementById('af-site-address').value.trim(),
-      lat: parseFloat(document.getElementById('af-site-lat').value),
-      lng: parseFloat(document.getElementById('af-site-lng').value),
-    };
+    const name = document.getElementById('af-site-name').value.trim();
+    const address = document.getElementById('af-site-address').value.trim();
+    if (!name || !address) {
+      afStatus.textContent = '지점 이름과 주소를 입력하세요.';
+      return;
+    }
+
+    afStatus.textContent = '주소로 위치 찾는 중...';
+    let coords;
+    try {
+      coords = await geocodeAddress(address);
+    } catch (err) {
+      afStatus.textContent = `위치 검색 실패: ${err.message}`;
+      return;
+    }
+    if (!coords) {
+      afStatus.textContent = '주소를 찾지 못했습니다. 시/구/도로명까지 더 자세히 입력해보세요.';
+      return;
+    }
+
+    body.newSite = { name, address, lat: coords.lat, lng: coords.lng };
   }
 
   afStatus.textContent = '추가하는 중...';
