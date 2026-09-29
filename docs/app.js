@@ -178,7 +178,10 @@ function upsertChargerLocal(partial) {
   const prev = chargersById.get(partial.id) || {};
   const charger = { ...prev, ...partial };
   chargersById.set(charger.id, charger);
-  if (charger.site_id) knownSites.set(charger.site_id, siteLabel(charger));
+  if (charger.site_id) {
+    knownSites.set(charger.site_id, siteLabel(charger));
+    refreshSiteOptions();
+  }
   renderCard(charger);
   renderSiteMarker(siteKey(charger));
 }
