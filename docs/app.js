@@ -310,10 +310,9 @@ addChargerForm.addEventListener('submit', async (e) => {
   if (siteMode === 'existing') {
     body.siteId = afSiteSelect.value || null;
   } else {
-    const name = document.getElementById('af-site-name').value.trim();
     const address = document.getElementById('af-site-address').value.trim();
-    if (!name || !address) {
-      afStatus.textContent = '지점 이름과 주소를 입력하세요.';
+    if (!address) {
+      afStatus.textContent = '주소를 입력하세요.';
       return;
     }
 
@@ -330,7 +329,8 @@ addChargerForm.addEventListener('submit', async (e) => {
       return;
     }
 
-    body.newSite = { name, address, lat: coords.lat, lng: coords.lng };
+    // name은 안 보내고 서버에서 주소의 도로명+건물번호로 자동으로 짓습니다.
+    body.newSite = { address, lat: coords.lat, lng: coords.lng };
   }
 
   afStatus.textContent = '추가하는 중...';
