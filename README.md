@@ -139,14 +139,11 @@ ID 목록이 아니라 "그 충전기가 실제로 존재하는지"만 확인하
 무료 지오코딩(Nominatim)으로 자동 변환합니다.
 SQL Editor나 Table Editor를 열 필요가 없습니다.
 
-이건 `add-charger`라는 새 Edge Function이 처리합니다. 아무나 누르고 마음대로 데이터를
-채워 넣지 못하도록, 폼에 입력하는 **관리자 PIN**을 서버에서 확인합니다.
+이건 `add-charger`라는 새 Edge Function이 처리합니다. 지금은 이 데모 전용이라 PIN 같은
+접근 제어 없이 누구나 쓸 수 있게 열어뒀습니다. 나중에 진짜 여러 사람이 쓰는 서비스로 가면
+로그인/권한 체계가 이 역할을 대신하게 됩니다.
 
-**1) PIN 설정** (한 번만): Supabase 대시보드 **Project Settings → Edge Functions →
-Secrets**(또는 Manage secrets)에서 이름 `ADMIN_PIN`, 값은 원하는 숫자/문자열(예: `1234`)로
-추가.
-
-**2) 함수 배포**: **Edge Functions → Deploy a new function** → 이름 `add-charger` →
+**함수 배포**: **Edge Functions → Deploy a new function** → 이름 `add-charger` →
 `supabase/functions/add-charger/index.ts` 내용을 그대로 붙여넣고 **Deploy**.
 
 기존에 만들어둔 지점 5곳("강남역 충전소" 등)은 이 규칙 이전에 만든 거라 이름이 다릅니다.

@@ -301,7 +301,6 @@ addChargerForm.addEventListener('submit', async (e) => {
 
   const siteMode = addChargerForm.querySelector('input[name="site-mode"]:checked').value;
   const body = {
-    pin: document.getElementById('af-pin').value,
     chargerId,
     vendor: document.getElementById('af-vendor').value.trim(),
     model: document.getElementById('af-model').value.trim(),
