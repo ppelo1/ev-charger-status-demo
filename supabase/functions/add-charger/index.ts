@@ -8,11 +8,12 @@ const corsHeaders = {
 // 페이지 소스만 보면 누구나 호출은 할 수 있으니, 진짜 접근 제어는 서버 쪽 비밀값(PIN)으로 합니다.
 // Supabase 대시보드 Project Settings → Edge Functions → Secrets 에서 ADMIN_PIN을 설정해야 합니다.
 
-// 지점 이름을 따로 안 받았으면 주소 끝의 "도로명 + 건물번호"로 자동으로 짓습니다.
-// 예: "서울 강남구 강남대로 396" → "강남대로 396"
+// 지점 이름을 따로 안 받았으면 주소 맨 앞(시/도)과 끝의 "도로명 + 건물번호"로 자동으로
+// 짓습니다. 가운데 구/군은 뺍니다. 예: "서울 강남구 강남대로 396" → "서울 강남대로 396"
 function deriveNameFromAddress(address: string): string {
   const tokens = address.trim().split(/\s+/).filter(Boolean);
-  return tokens.slice(-2).join(' ') || address;
+  if (tokens.length <= 2) return tokens.join(' ') || address;
+  return `${tokens[0]} ${tokens.slice(-2).join(' ')}`;
 }
 
 Deno.serve(async (req) => {

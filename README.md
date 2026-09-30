@@ -134,8 +134,9 @@ ID 목록이 아니라 "그 충전기가 실제로 존재하는지"만 확인하
 
 페이지의 **"+ 충전기 추가"** 버튼을 누르면 폼이 열리고, 여기서 충전기 ID와 (기존 지점 선택
 또는 새 지점 주소)를 입력해서 추가할 수 있습니다. 새 지점의 이름은 따로 입력받지 않고
-주소 끝의 "도로명 + 건물번호"로 자동으로 짓고(예: "서울 강남구 강남대로 396" → "강남대로
-396"), 위도·경도도 그 주소를 OpenStreetMap의 무료 지오코딩(Nominatim)으로 자동 변환합니다.
+주소 맨 앞(시/도)과 끝의 "도로명 + 건물번호"로 자동으로 짓고, 가운데 구/군은 뺍니다
+(예: "서울 강남구 강남대로 396" → "서울 강남대로 396"), 위도·경도도 그 주소를 OpenStreetMap의
+무료 지오코딩(Nominatim)으로 자동 변환합니다.
 SQL Editor나 Table Editor를 열 필요가 없습니다.
 
 이건 `add-charger`라는 새 Edge Function이 처리합니다. 아무나 누르고 마음대로 데이터를
@@ -152,11 +153,11 @@ Secrets**(또는 Manage secrets)에서 이름 `ADMIN_PIN`, 값은 원하는 숫�
 같은 방식으로 맞추려면 SQL Editor에서:
 
 ```sql
-update sites set name = '강남대로 396' where name = '강남역 충전소';
-update sites set name = '양화로 160' where name = '홍대입구 충전소';
-update sites set name = '여의공원로 68' where name = '여의도 충전소';
-update sites set name = '신촌로 83' where name = '신촌 충전소';
-update sites set name = '학동로 426' where name = '강남구청 충전소';
+update sites set name = '서울 강남대로 396' where name in ('강남역 충전소', '강남대로 396');
+update sites set name = '서울 양화로 160' where name in ('홍대입구 충전소', '양화로 160');
+update sites set name = '서울 여의공원로 68' where name in ('여의도 충전소', '여의공원로 68');
+update sites set name = '서울 신촌로 83' where name in ('신촌 충전소', '신촌로 83');
+update sites set name = '서울 학동로 426' where name in ('강남구청 충전소', '학동로 426');
 ```
 
 이후 페이지에서 "+ 충전기 추가"를 눌러 PIN과 정보를 입력하면 바로 등록됩니다.
