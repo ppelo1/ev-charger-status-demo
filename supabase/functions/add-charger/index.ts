@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { chargerId, chargerIds, vendor, model, siteId, newSite } = body;
+    const { chargerId, chargerIds, vendor, model, siteId, newSite, preview } = body;
 
     // chargerIds: 단말이 먼저 접속해서 이미 chargers에 올라와 있는(지점 미배정) 충전기들.
     // chargerId: 아직 접속한 적 없는 충전기를 손으로 미리 등록할 때.
@@ -67,6 +67,24 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: '이 주소에 등록된 충전기 정보가 없어요. 단말을 선택하거나 충전기 ID를 입력해주세요.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // preview: 아무것도 쓰지 않고, 이 주소로 추가될 충전기만 알려줍니다(확인 팝업용).
+    if (preview) {
+      const ids = presetChargers.map((c) => c.id);
+      const { data: existingRows, error: existingError } = ids.length
+        ? await supabase.from('chargers').select('id').in('id', ids)
+        : { data: [], error: null };
+      if (existingError) throw existingError;
+      const existing = new Set((existingRows ?? []).map((r: { id: string }) => r.id));
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          preview: true,
+          chargers: presetChargers.map((c) => ({ ...c, exists: existing.has(c.id) })),
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

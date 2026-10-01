@@ -235,3 +235,35 @@ main#cards {
   font-size: 13px;
   padding: 2px 0;
 }
+
+.confirm-dialog {
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 18px 20px;
+  max-width: 420px;
+  width: calc(100% - 32px);
+}
+.confirm-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+.confirm-dialog h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.cd-address {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+.cd-chargers {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  font-size: 14px;
+}
+.cd-note {
+  color: #888;
+}
+.cd-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

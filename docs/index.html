@@ -47,6 +47,16 @@
     </form>
   </div>
 
+  <dialog id="confirm-dialog" class="confirm-dialog">
+    <h3>이 주소에 지점을 만들고 충전기를 추가할까요?</h3>
+    <p id="cd-address" class="cd-address"></p>
+    <ul id="cd-chargers" class="cd-chargers"></ul>
+    <div class="cd-actions">
+      <button type="button" id="cd-cancel" class="btn">취소</button>
+      <button type="button" id="cd-confirm" class="btn btn-ok">확인</button>
+    </div>
+  </dialog>
+
   <main id="cards"></main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>

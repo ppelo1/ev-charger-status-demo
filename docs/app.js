@@ -311,6 +311,37 @@ addChargerForm.querySelectorAll('input[name="site-mode"]').forEach((radio) => {
   });
 });
 
+// 새 지점을 만들기 전에 주소와 같이 추가될 충전기를 팝업으로 보여주고, 확인했을 때만 true를 돌려줍니다.
+const confirmDialog = document.getElementById('confirm-dialog');
+
+function confirmAddition(address, items) {
+  document.getElementById('cd-address').textContent = address;
+  const list = document.getElementById('cd-chargers');
+  list.innerHTML = '';
+  items.forEach((text) => {
+    const li = document.createElement('li');
+    li.textContent = text;
+    list.appendChild(li);
+  });
+  return new Promise((resolve) => {
+    const confirmBtn = document.getElementById('cd-confirm');
+    const cancelBtn = document.getElementById('cd-cancel');
+    const done = (result) => {
+      confirmBtn.removeEventListener('click', onConfirm);
+      cancelBtn.removeEventListener('click', onCancel);
+      confirmDialog.removeEventListener('close', onCancel);
+      if (confirmDialog.open) confirmDialog.close();
+      resolve(result);
+    };
+    const onConfirm = () => done(true);
+    const onCancel = () => done(false);
+    confirmBtn.addEventListener('click', onConfirm);
+    cancelBtn.addEventListener('click', onCancel);
+    confirmDialog.addEventListener('close', onCancel); // Esc로 닫은 경우
+    confirmDialog.showModal();
+  });
+}
+
 addChargerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -353,6 +384,26 @@ addChargerForm.addEventListener('submit', async (e) => {
 
     // name은 안 보내고 서버에서 주소의 도로명+건물번호로 자동으로 짓습니다.
     body.newSite = { address, lat: coords.lat, lng: coords.lng };
+
+    // 먼저 아무것도 만들지 않고 미리보기만 받아서, 팝업에서 확인한 뒤에 실제로 추가합니다.
+    afStatus.textContent = '추가될 충전기 확인 중...';
+    const { data: preview, error: previewError } = await supabase.functions.invoke('add-charger', {
+      body: { ...body, preview: true },
+    });
+    if (previewError || preview?.error) {
+      afStatus.textContent = `실패: ${preview?.error || previewError.message}`;
+      return;
+    }
+    const items = (preview.chargers || []).map(
+      (c) => `${c.id} (${c.vendor || '?'} ${c.model || ''})${c.exists ? ' — 이미 있어서 건너뜀' : ''}`
+    );
+    chargerIds.forEach((id) => items.push(`${id} (접속 중인 단말, 이 지점에 배정)`));
+    if (chargerId) items.push(`${chargerId} (직접 입력)`);
+    const ok = await confirmAddition(address, items);
+    if (!ok) {
+      afStatus.textContent = '취소했습니다.';
+      return;
+    }
   }
 
   afStatus.textContent = '추가하는 중...';
