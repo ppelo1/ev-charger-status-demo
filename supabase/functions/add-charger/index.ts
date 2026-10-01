@@ -20,10 +20,23 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { chargerId, vendor, model, siteId, newSite } = body;
+    const { chargerId, chargerIds, vendor, model, siteId, newSite } = body;
 
-    if (!chargerId || typeof chargerId !== 'string' || chargerId.length > 40) {
+    // chargerIds: 단말이 먼저 접속해서 이미 chargers에 올라와 있는(지점 미배정) 충전기들.
+    // chargerId: 아직 접속한 적 없는 충전기를 손으로 미리 등록할 때.
+    const claimIds: string[] = Array.isArray(chargerIds)
+      ? chargerIds.filter((id) => typeof id === 'string' && id.length > 0 && id.length <= 40).slice(0, 50)
+      : [];
+    const hasManualId = chargerId !== undefined && chargerId !== null && chargerId !== '';
+
+    if (hasManualId && (typeof chargerId !== 'string' || chargerId.length > 40)) {
       return new Response(JSON.stringify({ error: '충전기 ID를 확인해주세요.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (!hasManualId && claimIds.length === 0) {
+      return new Response(JSON.stringify({ error: '추가할 충전기를 선택하거나 ID를 입력해주세요.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -54,6 +67,26 @@ Deno.serve(async (req) => {
       finalSiteId = siteRow.id;
     }
 
+    // 접속해 있는 미배정 단말은 새로 만들지 않고 지점만 연결합니다. 이미 다른 지점에 배정된
+    // 충전기를 덮어쓰지 않도록 site_id가 비어 있는 것만 대상으로 합니다.
+    let claimed: string[] = [];
+    if (claimIds.length > 0) {
+      const { data: claimedRows, error: claimError } = await supabase
+        .from('chargers')
+        .update({ site_id: finalSiteId })
+        .in('id', claimIds)
+        .is('site_id', null)
+        .select('id');
+      if (claimError) throw claimError;
+      claimed = (claimedRows ?? []).map((r: { id: string }) => r.id);
+    }
+
+    if (!hasManualId) {
+      return new Response(JSON.stringify({ ok: true, siteId: finalSiteId, claimed }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { error: chargerError } = await supabase.from('chargers').insert({
       id: chargerId,
       vendor: vendor ? String(vendor).slice(0, 60) : 'DemoVendor',
@@ -67,7 +100,7 @@ Deno.serve(async (req) => {
     });
     if (chargerError) throw chargerError;
 
-    return new Response(JSON.stringify({ ok: true, siteId: finalSiteId }), {
+    return new Response(JSON.stringify({ ok: true, siteId: finalSiteId, claimed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {

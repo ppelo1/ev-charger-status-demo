@@ -273,9 +273,30 @@ function refreshSiteOptions() {
   });
 }
 
+// 단말이 자기가 먼저 접속(BootNotification에 해당)해서 chargers에 올라왔지만 아직 지점이
+// 없는 충전기들을 체크박스로 보여줍니다. 실제 설치 때처럼 "단말이 먼저 나타나고, 사람이
+// 어느 지점인지 지정"하는 흐름입니다.
+const afUnassignedBox = document.getElementById('af-unassigned-box');
+const afUnassigned = document.getElementById('af-unassigned');
+
+function refreshUnassigned() {
+  const unassigned = [...chargersById.values()].filter((c) => !c.site_id);
+  afUnassigned.innerHTML = '';
+  afUnassignedBox.hidden = unassigned.length === 0;
+  unassigned.forEach((c) => {
+    const label = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = c.id;
+    label.append(cb, ` ${c.id} (${c.vendor || '?'} ${c.model || ''}, ${statusMeta(c.status).label})`);
+    afUnassigned.appendChild(label);
+  });
+}
+
 adminToggle.addEventListener('click', () => {
   if (addChargerForm.hasAttribute('hidden')) {
     refreshSiteOptions();
+    refreshUnassigned();
     addChargerForm.removeAttribute('hidden');
   } else {
     addChargerForm.setAttribute('hidden', '');
@@ -294,14 +315,16 @@ addChargerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const chargerId = document.getElementById('af-id').value.trim();
-  if (!chargerId) {
-    afStatus.textContent = '충전기 ID를 입력하세요.';
+  const chargerIds = [...afUnassigned.querySelectorAll('input:checked')].map((cb) => cb.value);
+  if (!chargerId && chargerIds.length === 0) {
+    afStatus.textContent = '지점에 넣을 단말을 선택하거나 충전기 ID를 입력하세요.';
     return;
   }
 
   const siteMode = addChargerForm.querySelector('input[name="site-mode"]:checked').value;
   const body = {
     chargerId,
+    chargerIds,
     vendor: document.getElementById('af-vendor').value.trim(),
     model: document.getElementById('af-model').value.trim(),
   };
