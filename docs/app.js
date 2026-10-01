@@ -316,12 +316,12 @@ addChargerForm.addEventListener('submit', async (e) => {
 
   const chargerId = document.getElementById('af-id').value.trim();
   const chargerIds = [...afUnassigned.querySelectorAll('input:checked')].map((cb) => cb.value);
-  if (!chargerId && chargerIds.length === 0) {
+  const siteMode = addChargerForm.querySelector('input[name="site-mode"]:checked').value;
+  // 새 지점 주소에 미리 등록된 충전기가 있으면 서버가 같이 추가하므로, 이 경우엔 비워도 됩니다.
+  if (siteMode === 'existing' && !chargerId && chargerIds.length === 0) {
     afStatus.textContent = '지점에 넣을 단말을 선택하거나 충전기 ID를 입력하세요.';
     return;
   }
-
-  const siteMode = addChargerForm.querySelector('input[name="site-mode"]:checked').value;
   const body = {
     chargerId,
     chargerIds,
@@ -363,7 +363,8 @@ addChargerForm.addEventListener('submit', async (e) => {
     return;
   }
 
-  afStatus.textContent = '추가됐습니다.';
+  const addedCount = (data?.added?.length || 0) + (data?.claimed?.length || 0) + (chargerId ? 1 : 0);
+  afStatus.textContent = addedCount > 1 ? `추가됐습니다. (충전기 ${addedCount}대)` : '추가됐습니다.';
   addChargerForm.reset();
   loadInitial();
 });

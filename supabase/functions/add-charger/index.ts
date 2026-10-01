@@ -13,6 +13,13 @@ function deriveNameFromAddress(address: string): string {
   return `${tokens[0]} ${tokens.slice(-2).join(' ')}`;
 }
 
+// 공백을 없애고 "서울특별시"를 "서울"로 맞춰서 주소 표기 차이를 줄입니다.
+function normalizeAddress(address: string): string {
+  return address.replace(/\s+/g, '').replace('서울특별시', '서울');
+}
+
+type PresetCharger = { id: string; vendor?: string; model?: string };
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -35,17 +42,33 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (!hasManualId && claimIds.length === 0) {
-      return new Response(JSON.stringify({ error: '추가할 충전기를 선택하거나 ID를 입력해주세요.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+
+    // 새 지점 주소가 address_presets의 도로명+번호와 맞으면, 그 주소에 있는 충전기들을 같이 추가합니다.
+    // (데모용 목록입니다. 실제 서비스에서는 공공데이터 API 등으로 대체할 자리입니다.)
+    let presetChargers: PresetCharger[] = [];
+    if (!siteId && newSite?.address) {
+      const normalized = normalizeAddress(String(newSite.address));
+      const { data: presets, error: presetError } = await supabase.from('address_presets').select('road_key, chargers');
+      if (presetError) throw presetError;
+      // "도산대로336"이 "도산대로3360"에 잘못 맞지 않도록 뒤에 숫자가 이어지지 않을 때만 일치로 봅니다.
+      const match = (presets ?? []).find((p: { road_key: string }) => {
+        const idx = normalized.indexOf(p.road_key);
+        return idx >= 0 && !/\d/.test(normalized[idx + p.road_key.length] ?? '');
+      });
+      if (match) presetChargers = match.chargers as PresetCharger[];
+    }
+
+    if (!hasManualId && claimIds.length === 0 && presetChargers.length === 0) {
+      return new Response(
+        JSON.stringify({ error: '이 주소에 등록된 충전기 정보가 없어요. 단말을 선택하거나 충전기 ID를 입력해주세요.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let finalSiteId = siteId || null;
 
@@ -81,8 +104,33 @@ Deno.serve(async (req) => {
       claimed = (claimedRows ?? []).map((r: { id: string }) => r.id);
     }
 
+    // 주소에 맞는 충전기들을 지점에 연결해서 만듭니다. 이미 있는 ID는 건드리지 않습니다.
+    let added: string[] = [];
+    if (presetChargers.length > 0) {
+      const now = new Date().toISOString();
+      const { data: addedRows, error: presetInsertError } = await supabase
+        .from('chargers')
+        .upsert(
+          presetChargers.map((c) => ({
+            id: c.id,
+            vendor: c.vendor ?? 'DemoVendor',
+            model: c.model ?? 'DC-50kW',
+            status: 'Available',
+            error_code: 'NoError',
+            connector_id: 1,
+            connected: true,
+            last_seen: now,
+            site_id: finalSiteId,
+          })),
+          { onConflict: 'id', ignoreDuplicates: true }
+        )
+        .select('id');
+      if (presetInsertError) throw presetInsertError;
+      added = (addedRows ?? []).map((r: { id: string }) => r.id);
+    }
+
     if (!hasManualId) {
-      return new Response(JSON.stringify({ ok: true, siteId: finalSiteId, claimed }), {
+      return new Response(JSON.stringify({ ok: true, siteId: finalSiteId, claimed, added }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -100,7 +148,7 @@ Deno.serve(async (req) => {
     });
     if (chargerError) throw chargerError;
 
-    return new Response(JSON.stringify({ ok: true, siteId: finalSiteId, claimed }), {
+    return new Response(JSON.stringify({ ok: true, siteId: finalSiteId, claimed, added }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
