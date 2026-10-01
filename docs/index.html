@@ -22,7 +22,11 @@
   <div class="admin-panel">
     <button id="admin-toggle" type="button" class="admin-toggle-btn">+ 충전기 추가</button>
     <form id="add-charger-form" class="admin-form" hidden>
-      <input id="af-id" type="text" placeholder="충전기 ID (예: CP-7)" autocomplete="off">
+      <fieldset id="af-unassigned-box" class="admin-unassigned" hidden>
+        <legend>접속했지만 지점이 없는 단말</legend>
+        <div id="af-unassigned"></div>
+      </fieldset>
+      <input id="af-id" type="text" placeholder="미리 등록할 충전기 ID (선택, 예: CP-7)" autocomplete="off">
       <input id="af-vendor" type="text" placeholder="제조사 (선택, 비우면 DemoVendor)" autocomplete="off">
       <input id="af-model" type="text" placeholder="모델 (선택, 비우면 DC-50kW)" autocomplete="off">
 
@@ -35,7 +39,7 @@
 
       <div id="af-new-site-fields" hidden>
         <input id="af-site-address" type="text" placeholder="주소 (예: 서울 강남구 강남대로 396)" autocomplete="off">
-        <p class="admin-hint">지점 이름은 주소의 도로명+건물번호로 자동으로 붙고, 위도·경도도 자동으로 찾아요.</p>
+        <p class="admin-hint">지점 이름은 주소의 도로명+건물번호로 자동으로 붙고, 위도·경도도 자동으로 찾아요. 이 주소에 미리 등록된 충전기가 있으면 같이 추가돼요.</p>
       </div>
 
       <button type="submit" class="btn btn-ok">추가</button>
