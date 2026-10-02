@@ -267,3 +267,14 @@ main#cards {
   justify-content: flex-end;
   gap: 8px;
 }
+
+.hd-item {
+  padding: 2px 0;
+}
+.hd-item.fault {
+  color: #c0392b;
+  font-weight: 600;
+}
+.hd-item.offline {
+  color: #9a9a90;
+}

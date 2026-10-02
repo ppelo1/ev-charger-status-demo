@@ -109,6 +109,55 @@ async function setStatus(id, status, button) {
   if (error) alert(`상태 변경 실패: ${error.message}`);
 }
 
+// 충전기 하나의 상태 변경 이력(고장이 언제 났고 얼마나 지속됐는지)을 팝업으로 보여줍니다.
+const historyDialog = document.getElementById('history-dialog');
+document.getElementById('hd-close').addEventListener('click', () => historyDialog.close());
+
+function formatDuration(ms) {
+  const sec = Math.max(0, Math.round(ms / 1000));
+  if (sec < 60) return `${sec}초`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}분`;
+  const hour = Math.floor(min / 60);
+  if (hour < 24) return `${hour}시간 ${min % 60}분`;
+  return `${Math.floor(hour / 24)}일 ${hour % 24}시간`;
+}
+
+async function showHistory(id) {
+  document.getElementById('hd-title').textContent = `${id} 상태 이력`;
+  const list = document.getElementById('hd-list');
+  list.innerHTML = '<li class="cd-note">불러오는 중...</li>';
+  historyDialog.showModal();
+
+  const { data, error } = await supabase
+    .from('charger_events')
+    .select('status, error_code, created_at')
+    .eq('charger_id', id)
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  list.innerHTML = '';
+  if (error) {
+    list.innerHTML = `<li class="cd-note">이력을 불러오지 못했습니다: ${error.message}</li>`;
+    return;
+  }
+  if (!data.length) {
+    list.innerHTML = '<li class="cd-note">아직 기록된 이력이 없습니다. 충전기 상태가 바뀌면 여기에 쌓입니다.</li>';
+    return;
+  }
+  data.forEach((ev, i) => {
+    // 이 상태가 지속된 시간 = 다음(더 최근) 이벤트가 생긴 시각까지, 가장 최근 것은 지금까지.
+    const endMs = i === 0 ? Date.now() : new Date(data[i - 1].created_at).getTime();
+    const duration = formatDuration(endMs - new Date(ev.created_at).getTime());
+    const meta = statusMeta(ev.status);
+    const li = document.createElement('li');
+    li.className = `hd-item ${meta.cls}`;
+    const code = ev.error_code && ev.error_code !== 'NoError' ? ` (${ev.error_code})` : '';
+    li.textContent = `${new Date(ev.created_at).toLocaleString('ko-KR')} · ${meta.label}${code} · ${duration}${i === 0 ? ' 지속 중' : ' 지속'}`;
+    list.appendChild(li);
+  });
+}
+
 function renderCard(charger) {
   const group = getOrCreateSiteGroup(siteKey(charger));
   group.title.textContent = siteLabel(charger);
@@ -125,6 +174,7 @@ function renderCard(charger) {
       <div class="card-actions">
         <button type="button" class="btn btn-fault">고장으로 전환</button>
         <button type="button" class="btn btn-ok">정상으로 복귀</button>
+        <button type="button" class="btn btn-history">이력 보기</button>
       </div>
     `;
     group.cardsWrap.appendChild(card);
@@ -132,6 +182,7 @@ function renderCard(charger) {
 
     card.querySelector('.btn-fault').addEventListener('click', (e) => setStatus(charger.id, 'Faulted', e.currentTarget));
     card.querySelector('.btn-ok').addEventListener('click', (e) => setStatus(charger.id, 'Available', e.currentTarget));
+    card.querySelector('.btn-history').addEventListener('click', () => showHistory(charger.id));
   }
   const meta = statusMeta(charger.status);
   card.className = `card ${meta.cls}`;
