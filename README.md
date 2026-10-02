@@ -29,6 +29,13 @@ npm run simulate
 
 브라우저에서 http://localhost:3000 접속하면 충전기 3대(CP-1, CP-2, CP-3) 카드가 보입니다.
 
+### DB에 상태와 고장 이력 저장하기 (선택)
+
+`.env`에 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 넣고 `npm start`를 실행하면, 서버가 OCPP로
+받은 충전기 상태를 Supabase `chargers`에 저장하고, 상태가 바뀔 때마다 `charger_events`에 한 줄씩
+이력을 남깁니다(고장이 언제 났고 언제 복구됐는지 조회 가능). 연결이 끊기면 Offline으로 기록합니다.
+키가 없으면 예전처럼 메모리에만 두는 로컬 모드로 동작합니다.
+
 ## 라이브 데모 시나리오
 
 `npm run simulate`를 실행한 터미널에 다음처럼 입력하면 그 즉시 대시보드에 반영됩니다.

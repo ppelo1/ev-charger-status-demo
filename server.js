@@ -1,4 +1,6 @@
+require('dotenv').config();
 const express = require('express');
+const { createClient } = require('@supabase/supabase-js');
 const http = require('http');
 const path = require('path');
 const { WebSocketServer } = require('ws');
@@ -13,6 +15,39 @@ const dashboardWss = new WebSocketServer({ noServer: true });
 
 // id -> { id, vendor, model, status, errorCode, connectorId, lastSeen, connected }
 const chargers = new Map();
+
+// Supabase 키가 .env에 있으면 충전기 상태와 상태 변경 이력을 DB에도 저장합니다.
+// 없으면 예전처럼 메모리에만 두는 로컬 모드로 동작합니다.
+// service_role 키는 RLS를 무시하는 관리자 권한이라 이 서버 밖으로 나가면 안 됩니다.
+const supabase =
+  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    : null;
+
+// site_id는 건드리지 않습니다(지점 배정은 사람이 하므로, 접속할 때마다 덮어쓰면 안 됨).
+async function persistCharger(next, statusChanged) {
+  if (!supabase) return;
+  const { error } = await supabase.from('chargers').upsert({
+    id: next.id,
+    vendor: next.vendor,
+    model: next.model,
+    status: next.status,
+    error_code: next.errorCode,
+    connector_id: next.connectorId,
+    connected: next.connected,
+    last_seen: next.lastSeen,
+  });
+  if (error) {
+    console.error(`[DB] ${next.id} 저장 실패: ${error.message}`);
+    return;
+  }
+  if (statusChanged) {
+    const { error: eventError } = await supabase
+      .from('charger_events')
+      .insert({ charger_id: next.id, status: next.status, error_code: next.errorCode });
+    if (eventError) console.error(`[DB] ${next.id} 이력 저장 실패: ${eventError.message}`);
+  }
+}
 
 function broadcastDashboard(payload) {
   const msg = JSON.stringify(payload);
@@ -35,6 +70,9 @@ function upsertCharger(id, patch) {
   const next = { ...prev, ...patch, lastSeen: new Date().toISOString() };
   chargers.set(id, next);
   broadcastDashboard({ type: 'update', charger: next });
+  // 상태나 에러 코드가 바뀐 때만 이력에 한 줄 남깁니다(8초마다 오는 같은 상태는 기록하지 않음).
+  const statusChanged = prev.status !== next.status || prev.errorCode !== next.errorCode;
+  persistCharger(next, statusChanged);
   return next;
 }
 
@@ -102,6 +140,7 @@ dashboardWss.on('connection', (ws) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
+  console.log(supabase ? 'Supabase 저장: 켜짐 (상태와 이력을 DB에 기록)' : 'Supabase 저장: 꺼짐 (.env에 키가 없어 메모리만 사용)');
   console.log(`대시보드: http://localhost:${PORT}`);
   console.log(`OCPP 접속 주소(시뮬레이터용): ws://localhost:${PORT}/ocpp/{충전기ID}`);
 });
