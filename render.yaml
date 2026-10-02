@@ -1,0 +1,25 @@
+# Render Blueprint: OCPP 서버(server.js)를 인터넷에 올리는 설정입니다.
+# 비밀 값(sync: false)은 이 파일에 적지 않고, Render 화면에서 직접 입력합니다.
+services:
+  - type: web
+    name: ev-charger-ocpp
+    runtime: node
+    plan: free
+    branch: main
+    autoDeploy: true
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: SUPABASE_URL
+        value: https://aopqdrdzpeguxwyzvssp.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: HEARTBEAT_INTERVAL_SEC
+        value: "30"
+      - key: NTFY_TOPIC
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
