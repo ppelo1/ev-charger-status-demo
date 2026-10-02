@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     // 만들 수는 없고, 있는 충전기의 상태만 바꿀 수 있다는 보안 범위는 그대로입니다.
     const { data: existing, error: findError } = await supabase
       .from('chargers')
-      .select('id')
+      .select('id, status, error_code')
       .eq('id', id)
       .maybeSingle();
     if (findError) throw findError;
@@ -53,6 +53,14 @@ Deno.serve(async (req) => {
       .eq('id', id);
 
     if (error) throw error;
+
+    // 상태가 실제로 바뀐 경우에만 이력에 한 줄 남깁니다(같은 버튼을 연타해도 중복 기록 안 함).
+    if (existing.status !== status || existing.error_code !== errorCode) {
+      const { error: eventError } = await supabase
+        .from('charger_events')
+        .insert({ charger_id: id, status, error_code: errorCode });
+      if (eventError) throw eventError;
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
