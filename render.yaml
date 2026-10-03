@@ -19,7 +19,3 @@ services:
         value: "30"
       - key: NTFY_TOPIC
         sync: false
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: TELEGRAM_CHAT_ID
-        sync: false
