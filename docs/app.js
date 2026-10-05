@@ -159,11 +159,30 @@ async function showHistory(id) {
 }
 
 function renderCard(charger) {
-  const group = getOrCreateSiteGroup(siteKey(charger));
+  const key = siteKey(charger);
+  const group = getOrCreateSiteGroup(key);
   group.title.textContent = siteLabel(charger);
   if (charger.address) group.address.textContent = charger.address;
 
   let card = cardEls.get(charger.id);
+  // 지점이 새로 정해진 충전기(예: 매핑표로 자동 등록)는 새로고침 없이 새 지점 아래로 옮깁니다.
+  if (card && card.dataset.groupKey !== key) {
+    const oldKey = card.dataset.groupKey;
+    group.cardsWrap.appendChild(card);
+    card.dataset.groupKey = key;
+    const oldGroup = siteGroupEls.get(oldKey);
+    if (oldGroup && !oldGroup.cardsWrap.children.length) {
+      oldGroup.section.remove();
+      siteGroupEls.delete(oldKey);
+      const oldMarker = siteMarkers.get(oldKey);
+      if (oldMarker) {
+        markerCluster.removeLayer(oldMarker);
+        siteMarkers.delete(oldKey);
+      }
+    } else if (oldGroup) {
+      renderSiteMarker(oldKey);
+    }
+  }
   if (!card) {
     card = document.createElement('div');
     card.className = 'card';
@@ -178,6 +197,7 @@ function renderCard(charger) {
       </div>
     `;
     group.cardsWrap.appendChild(card);
+    card.dataset.groupKey = key;
     cardEls.set(charger.id, card);
 
     card.querySelector('.btn-fault').addEventListener('click', (e) => setStatus(charger.id, 'Faulted', e.currentTarget));
@@ -293,7 +313,12 @@ function subscribeRealtime() {
   supabase
     .channel('chargers-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chargers' }, (payload) => {
-      if (payload.new) upsertChargerLocal(payload.new);
+      if (!payload.new) return;
+      // 지점이 새로 정해졌다면(자동 등록 포함) 지점 이름/주소/좌표는 join해서 다시 받아와야 합니다.
+      const prev = chargersById.get(payload.new.id);
+      const siteChanged = payload.new.site_id && (!prev || prev.site_id !== payload.new.site_id);
+      if (siteChanged) loadInitial();
+      else upsertChargerLocal(payload.new);
     })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
@@ -469,6 +494,66 @@ addChargerForm.addEventListener('submit', async (e) => {
   afStatus.textContent = addedCount > 1 ? `추가됐습니다. (충전기 ${addedCount}대)` : '추가됐습니다.';
   addChargerForm.reset();
   loadInitial();
+});
+
+// 충전기 ID ↔ 설치 주소 매핑 관리 — 여기에 등록해 두면 충전기가 접속하는 순간 서버가 이 주소의 지점에 자동 등록합니다.
+const mappingToggle = document.getElementById('mapping-toggle');
+const mappingForm = document.getElementById('mapping-form');
+const mfStatus = document.getElementById('mf-status');
+const mfList = document.getElementById('mf-list');
+
+async function refreshMappingList() {
+  const { data, error } = await supabase.functions.invoke('register-chargers', { body: { list: true } });
+  mfList.innerHTML = '';
+  if (error || data?.error) {
+    mfStatus.textContent = `목록을 불러오지 못했습니다: ${data?.error || error.message}`;
+    return;
+  }
+  data.mappings.forEach((m) => {
+    const li = document.createElement('li');
+    li.textContent = `${m.charger_id} → ${m.address}`;
+    mfList.appendChild(li);
+  });
+}
+
+mappingToggle.addEventListener('click', () => {
+  if (mappingForm.hasAttribute('hidden')) {
+    mappingForm.removeAttribute('hidden');
+    refreshMappingList();
+  } else {
+    mappingForm.setAttribute('hidden', '');
+  }
+});
+
+mappingForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const mappings = [];
+  for (const line of document.getElementById('mf-text').value.split('\n')) {
+    const text = line.trim();
+    if (!text) continue;
+    const cut = text.indexOf(',');
+    const chargerId = cut > 0 ? text.slice(0, cut).trim() : '';
+    const address = cut > 0 ? text.slice(cut + 1).trim() : '';
+    if (!chargerId || !address) {
+      mfStatus.textContent = `"충전기ID, 주소" 형식으로 입력하세요: ${text}`;
+      return;
+    }
+    mappings.push({ chargerId, address });
+  }
+  if (!mappings.length) {
+    mfStatus.textContent = '등록할 줄을 입력하세요.';
+    return;
+  }
+
+  mfStatus.textContent = '등록하는 중...';
+  const { data, error } = await supabase.functions.invoke('register-chargers', { body: { mappings } });
+  if (error || data?.error) {
+    mfStatus.textContent = `실패: ${data?.error || error.message}`;
+    return;
+  }
+  mfStatus.textContent = `${data.count}건 등록했습니다. 해당 충전기가 신호를 보내오면 이 주소의 지점에 자동으로 등록됩니다.`;
+  document.getElementById('mf-text').value = '';
+  refreshMappingList();
 });
 
 loadInitial();

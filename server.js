@@ -3,6 +3,7 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const { notify } = require('./notify');
 const { createDemoCharger, setDemoFault } = require('./demo');
+const { ensureSite } = require('./registry');
 const http = require('http');
 const path = require('path');
 const { WebSocketServer } = require('ws');
@@ -40,7 +41,7 @@ const supabase =
     ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
     : null;
 
-// site_id는 건드리지 않습니다(지점 배정은 사람이 하므로, 접속할 때마다 덮어쓰면 안 됨).
+// 여기서는 site_id를 건드리지 않습니다(접속할 때마다 덮어쓰면 안 됨). 지점은 아래 ensureSite가 매핑표로 정합니다.
 async function persistCharger(next, statusChanged) {
   if (!supabase) return;
   const { error } = await supabase.from('chargers').upsert({
@@ -57,6 +58,8 @@ async function persistCharger(next, statusChanged) {
     console.error(`[DB] ${next.id} 저장 실패: ${error.message}`);
     return;
   }
+  // 매핑표에 이 충전기의 설치 주소가 있으면 그 지점에 자동 등록합니다(이미 지점이 있으면 아무것도 안 함).
+  ensureSite(supabase, next.id);
   if (statusChanged) {
     const { error: eventError } = await supabase
       .from('charger_events')

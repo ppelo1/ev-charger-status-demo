@@ -278,3 +278,11 @@ main#cards {
 .hd-item.offline {
   color: #9a9a90;
 }
+
+#mf-text {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px;
+}

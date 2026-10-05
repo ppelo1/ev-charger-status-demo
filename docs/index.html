@@ -21,6 +21,7 @@
 
   <div class="admin-panel">
     <button id="admin-toggle" type="button" class="admin-toggle-btn">+ 충전기 추가</button>
+    <button id="mapping-toggle" type="button" class="admin-toggle-btn">충전기-주소 매핑 관리</button>
     <form id="add-charger-form" class="admin-form" hidden>
       <fieldset id="af-unassigned-box" class="admin-unassigned" hidden>
         <legend>접속했지만 지점이 없는 단말</legend>
@@ -44,6 +45,13 @@
 
       <button type="submit" class="btn btn-ok">추가</button>
       <p id="af-status" class="admin-status"></p>
+    </form>
+    <form id="mapping-form" class="admin-form" hidden>
+      <p class="admin-hint">충전기 ID와 설치 주소를 한 줄에 하나씩, 쉼표로 구분해 입력하세요. 이렇게 등록해 두면 그 충전기가 신호를 보내오는 순간 이 주소의 지점에 자동으로 등록돼요.<br>예: DEMO-1, 서울 강남구 도산대로 336</p>
+      <textarea id="mf-text" rows="5" placeholder="DEMO-1, 서울 강남구 도산대로 336"></textarea>
+      <button type="submit" class="btn btn-ok">매핑 등록</button>
+      <p id="mf-status" class="admin-status"></p>
+      <ul id="mf-list" class="cd-chargers"></ul>
     </form>
   </div>
 
