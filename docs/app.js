@@ -109,6 +109,61 @@ async function setStatus(id, status, button) {
   if (error) alert(`상태 변경 실패: ${error.message}`);
 }
 
+// 충전기 삭제 — 확인 팝업을 거쳐서 delete-charger 함수로 지웁니다(이력도 함께 지워지고 되돌릴 수 없음).
+const deleteDialog = document.getElementById('delete-dialog');
+
+function removeChargerLocal(id) {
+  const card = cardEls.get(id);
+  if (!card) return;
+  const key = card.dataset.groupKey;
+  card.remove();
+  cardEls.delete(id);
+  chargersById.delete(id);
+
+  const group = siteGroupEls.get(key);
+  if (group && !group.cardsWrap.children.length) {
+    group.section.remove();
+    siteGroupEls.delete(key);
+    const marker = siteMarkers.get(key);
+    if (marker) {
+      markerCluster.removeLayer(marker);
+      siteMarkers.delete(key);
+    }
+    knownSites.delete(key);
+    refreshSiteOptions();
+  } else if (group) {
+    renderSiteMarker(key);
+  }
+}
+
+function askDelete(id) {
+  document.getElementById('dd-title').textContent = `${id}을(를) 삭제할까요?`;
+  document.getElementById('dd-mapping').checked = true;
+  const confirmBtn = document.getElementById('dd-confirm');
+  const cancelBtn = document.getElementById('dd-cancel');
+  const finish = () => {
+    confirmBtn.removeEventListener('click', onConfirm);
+    cancelBtn.removeEventListener('click', onCancel);
+    if (deleteDialog.open) deleteDialog.close();
+  };
+  const onCancel = () => finish();
+  const onConfirm = async () => {
+    const deleteMapping = document.getElementById('dd-mapping').checked;
+    confirmBtn.disabled = true;
+    const { data, error } = await supabase.functions.invoke('delete-charger', { body: { chargerId: id, deleteMapping } });
+    confirmBtn.disabled = false;
+    finish();
+    if (error || (data?.error && !/이미 없는/.test(data.error))) {
+      alert(`삭제 실패: ${data?.error || error.message}`);
+      return;
+    }
+    removeChargerLocal(id);
+  };
+  confirmBtn.addEventListener('click', onConfirm);
+  cancelBtn.addEventListener('click', onCancel);
+  deleteDialog.showModal();
+}
+
 // 충전기 하나의 상태 변경 이력(고장이 언제 났고 얼마나 지속됐는지)을 팝업으로 보여줍니다.
 const historyDialog = document.getElementById('history-dialog');
 document.getElementById('hd-close').addEventListener('click', () => historyDialog.close());
@@ -194,6 +249,7 @@ function renderCard(charger) {
         <button type="button" class="btn btn-fault">고장으로 전환</button>
         <button type="button" class="btn btn-ok">정상으로 복귀</button>
         <button type="button" class="btn btn-history">이력 보기</button>
+        <button type="button" class="btn btn-delete">삭제</button>
       </div>
     `;
     group.cardsWrap.appendChild(card);
@@ -203,6 +259,7 @@ function renderCard(charger) {
     card.querySelector('.btn-fault').addEventListener('click', (e) => setStatus(charger.id, 'Faulted', e.currentTarget));
     card.querySelector('.btn-ok').addEventListener('click', (e) => setStatus(charger.id, 'Available', e.currentTarget));
     card.querySelector('.btn-history').addEventListener('click', () => showHistory(charger.id));
+    card.querySelector('.btn-delete').addEventListener('click', () => askDelete(charger.id));
   }
   const meta = statusMeta(charger.status);
   card.className = `card ${meta.cls}`;
@@ -313,7 +370,12 @@ function subscribeRealtime() {
   supabase
     .channel('chargers-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chargers' }, (payload) => {
-      if (!payload.new) return;
+      // 다른 화면에서 삭제된 충전기도 이 화면에서 사라지게 합니다.
+      if (payload.eventType === 'DELETE') {
+        if (payload.old?.id) removeChargerLocal(payload.old.id);
+        return;
+      }
+      if (!payload.new || !payload.new.id) return;
       // 지점이 새로 정해졌다면(자동 등록 포함) 지점 이름/주소/좌표는 join해서 다시 받아와야 합니다.
       const prev = chargersById.get(payload.new.id);
       const siteChanged = payload.new.site_id && (!prev || prev.site_id !== payload.new.site_id);

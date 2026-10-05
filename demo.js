@@ -55,4 +55,13 @@ function setDemoFault(id, faulted) {
   return { id };
 }
 
-module.exports = { createDemoCharger, setDemoFault };
+// 삭제된 데모 충전기의 접속을 끊고 더 이상 신호를 보내지 않게 합니다.
+function removeDemoCharger(id) {
+  const demo = demos.get(id);
+  if (!demo) return;
+  clearInterval(demo.timer);
+  demos.delete(id);
+  demo.ws.terminate();
+}
+
+module.exports = { createDemoCharger, setDemoFault, removeDemoCharger };

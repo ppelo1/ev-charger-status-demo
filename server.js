@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const { notify } = require('./notify');
-const { createDemoCharger, setDemoFault } = require('./demo');
+const { createDemoCharger, setDemoFault, removeDemoCharger } = require('./demo');
 const { ensureSite } = require('./registry');
 const http = require('http');
 const path = require('path');
@@ -27,6 +27,8 @@ const dashboardWss = new WebSocketServer({ noServer: true });
 
 // id -> { id, vendor, model, status, errorCode, connectorId, lastSeen, connected }
 const chargers = new Map();
+const chargerSockets = new Map(); // id -> 접속 중인 충전기 소켓
+const removedIds = new Set(); // 화면에서 삭제돼 우리가 연결을 끊은 충전기(끊김을 Offline으로 다시 저장하지 않기 위함)
 
 // 충전기에게 알려주는 Heartbeat 주기와, 이 주기의 몇 배 동안 아무 신호가 없으면 통신 두절로 볼지.
 // 연결(소켓)은 살아 있는데 신호만 멈춘 경우도 잡기 위한 값입니다.
@@ -66,6 +68,28 @@ async function persistCharger(next, statusChanged) {
       .insert({ charger_id: next.id, status: next.status, error_code: next.errorCode });
     if (eventError) console.error(`[DB] ${next.id} 이력 저장 실패: ${eventError.message}`);
   }
+}
+
+// 웹 대시보드에서 충전기가 삭제되면(DB에서 행이 지워지면) 서버 쪽 상태도 정리하고 그 충전기의 연결을 끊습니다.
+// 이걸 안 하면 접속 중인 충전기가 다음 신호에 바로 다시 등록돼 버립니다.
+// 진짜 장비는 스스로 재접속할 수 있고, 그러면 다시 "위치 미등록"으로 올라옵니다(매핑표가 지워졌으니 지점은 안 붙음).
+function watchDeletions() {
+  if (!supabase) return;
+  supabase
+    .channel('server-charger-deletes')
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chargers' }, (payload) => {
+      const id = payload.old?.id;
+      if (!id) return;
+      console.log(`[삭제] ${id} 삭제됨 → 연결을 끊고 서버 상태에서 제거`);
+      removedIds.add(id);
+      chargers.delete(id);
+      removeDemoCharger(id);
+      const ws = chargerSockets.get(id);
+      if (ws) ws.terminate();
+      else removedIds.delete(id); // 접속 중이 아니면 끊김 이벤트가 없으니 표시를 바로 지웁니다.
+      broadcastDashboard({ type: 'remove', id });
+    })
+    .subscribe();
 }
 
 function broadcastDashboard(payload) {
@@ -142,6 +166,7 @@ server.on('upgrade', (req, socket, head) => {
 
 // 충전기(OCPP-J 1.6 최소 구현): BootNotification, StatusNotification, Heartbeat만 처리
 chargerWss.on('connection', (ws, req, id) => {
+  chargerSockets.set(id, ws);
   upsertCharger(id, { connected: true, status: chargers.get(id)?.status || 'Unknown' });
   console.log(`[OCPP] ${id} 연결됨`);
 
@@ -180,6 +205,8 @@ chargerWss.on('connection', (ws, req, id) => {
   });
 
   ws.on('close', () => {
+    if (chargerSockets.get(id) === ws) chargerSockets.delete(id);
+    if (removedIds.delete(id)) return; // 삭제로 끊은 연결이면 Offline 기록을 남기지 않습니다.
     upsertCharger(id, { connected: false, status: 'Offline' });
     console.log(`[OCPP] ${id} 연결 끊김 → Offline 처리`);
   });
@@ -190,6 +217,8 @@ dashboardWss.on('connection', (ws) => {
 });
 
 const PORT = process.env.PORT || 3000;
+watchDeletions();
+
 server.listen(PORT, () => {
   console.log(supabase ? 'Supabase 저장: 켜짐 (상태와 이력을 DB에 기록)' : 'Supabase 저장: 꺼짐 (.env에 키가 없어 메모리만 사용)');
   console.log(`대시보드: http://localhost:${PORT}`);

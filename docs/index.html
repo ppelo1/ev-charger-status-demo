@@ -65,6 +65,16 @@
     </div>
   </dialog>
 
+  <dialog id="delete-dialog" class="confirm-dialog">
+    <h3 id="dd-title"></h3>
+    <p class="cd-note">이 충전기와 상태 이력이 삭제되고, 되돌릴 수 없어요. 그 지점에 다른 충전기가 없으면 지점도 함께 삭제돼요.</p>
+    <label class="dd-option"><input type="checkbox" id="dd-mapping" checked> 충전기-주소 매핑표에서도 삭제 (체크 해제하면 다시 접속할 때 같은 지점에 자동 등록돼요)</label>
+    <div class="cd-actions">
+      <button type="button" id="dd-cancel" class="btn">취소</button>
+      <button type="button" id="dd-confirm" class="btn btn-fault">삭제</button>
+    </div>
+  </dialog>
+
   <dialog id="history-dialog" class="confirm-dialog">
     <h3 id="hd-title"></h3>
     <ul id="hd-list" class="cd-chargers"></ul>

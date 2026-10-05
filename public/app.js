@@ -85,6 +85,10 @@ function connect() {
       msg.chargers.forEach(renderCard);
     } else if (msg.type === 'update') {
       renderCard(msg.charger);
+    } else if (msg.type === 'remove') {
+      const card = cards.get(msg.id);
+      if (card) card.remove();
+      cards.delete(msg.id);
     }
   };
 }

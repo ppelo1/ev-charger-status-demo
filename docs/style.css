@@ -286,3 +286,12 @@ main#cards {
   font-size: 14px;
   padding: 8px;
 }
+
+.dd-option {
+  display: block;
+  font-size: 13px;
+  margin: 10px 0 14px;
+}
+.btn-delete {
+  color: #777;
+}
