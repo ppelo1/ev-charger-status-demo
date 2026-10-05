@@ -2,12 +2,22 @@ require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const { notify } = require('./notify');
+const { createDemoCharger, setDemoFault } = require('./demo');
 const http = require('http');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
+
+// 데모용 가짜 충전기 만들기/고장 토글. 시연 기간에만 쓰도록 DEMO_BUTTONS=0이면 끌 수 있습니다.
+// 상태를 바꾸는 요청이라 POST만 받습니다.
+if (process.env.DEMO_BUTTONS !== '0') {
+  const reply = (res, result) => res.status(result.error ? 400 : 200).json(result);
+  app.post('/api/demo/charger', (req, res) => reply(res, createDemoCharger(server.address().port)));
+  app.post('/api/demo/charger/:id/fault', (req, res) => reply(res, setDemoFault(req.params.id, true)));
+  app.post('/api/demo/charger/:id/ok', (req, res) => reply(res, setDemoFault(req.params.id, false)));
+}
 
 const server = http.createServer(app);
 

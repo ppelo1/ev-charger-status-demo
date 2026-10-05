@@ -19,6 +19,22 @@ function statusMeta(status) {
   }
 }
 
+// 데모 충전기(DEMO-n)는 서버 안에서 만든 가짜라서, 카드의 버튼으로 고장 신호를 보내게 할 수 있습니다.
+async function demoCall(path, button) {
+  const msgEl = document.getElementById('demo-msg');
+  if (button) button.disabled = true;
+  try {
+    const res = await fetch(path, { method: 'POST' });
+    const data = await res.json();
+    msgEl.textContent = data.error || '';
+  } catch {
+    msgEl.textContent = '요청에 실패했어요. 잠시 후 다시 눌러보세요.';
+  }
+  if (button) button.disabled = false;
+}
+
+document.getElementById('demo-add').addEventListener('click', (e) => demoCall('/api/demo/charger', e.currentTarget));
+
 function renderCard(charger) {
   let card = cards.get(charger.id);
   if (!card) {
@@ -29,6 +45,18 @@ function renderCard(charger) {
       <div class="card-status"></div>
       <div class="card-meta"></div>
     `;
+    if (charger.id.startsWith('DEMO-')) {
+      const actions = document.createElement('div');
+      actions.className = 'card-actions';
+      actions.innerHTML = `
+        <button type="button" class="btn btn-fault">고장으로 전환</button>
+        <button type="button" class="btn btn-ok">정상으로 복귀</button>
+      `;
+      const id = encodeURIComponent(charger.id);
+      actions.querySelector('.btn-fault').addEventListener('click', (e) => demoCall(`/api/demo/charger/${id}/fault`, e.currentTarget));
+      actions.querySelector('.btn-ok').addEventListener('click', (e) => demoCall(`/api/demo/charger/${id}/ok`, e.currentTarget));
+      card.appendChild(actions);
+    }
     cardsEl.appendChild(card);
     cards.set(charger.id, card);
   }
