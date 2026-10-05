@@ -138,7 +138,7 @@ function removeChargerLocal(id) {
 
 function askDelete(id) {
   document.getElementById('dd-title').textContent = `${id}을(를) 삭제할까요?`;
-  document.getElementById('dd-mapping').checked = true;
+  document.getElementById('dd-mapping').checked = false;
   const confirmBtn = document.getElementById('dd-confirm');
   const cancelBtn = document.getElementById('dd-cancel');
   const finish = () => {
