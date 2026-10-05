@@ -98,4 +98,11 @@ async function ensureSite(supabase, chargerId) {
   }
 }
 
-module.exports = { ensureSite };
+// 충전기가 삭제되거나 새로 접속할 때 "이미 배정됨/방금 확인함" 기억을 지워서, 다음 신호에서 매핑표를 다시 보게 합니다.
+// 이걸 안 지우면 삭제했다가 다시 만든 충전기가 예전 배정 기억 때문에 지점이 안 붙습니다.
+function forget(chargerId) {
+  assigned.delete(chargerId);
+  lastChecked.delete(chargerId);
+}
+
+module.exports = { ensureSite, forget };

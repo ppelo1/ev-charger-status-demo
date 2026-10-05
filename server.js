@@ -3,7 +3,7 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const { notify } = require('./notify');
 const { createDemoCharger, setDemoFault, removeDemoCharger } = require('./demo');
-const { ensureSite } = require('./registry');
+const { ensureSite, forget } = require('./registry');
 const http = require('http');
 const path = require('path');
 const { WebSocketServer } = require('ws');
@@ -82,6 +82,7 @@ function watchDeletions() {
       if (!id) return;
       console.log(`[삭제] ${id} 삭제됨 → 연결을 끊고 서버 상태에서 제거`);
       removedIds.add(id);
+      forget(id);
       chargers.delete(id);
       removeDemoCharger(id);
       const ws = chargerSockets.get(id);
@@ -167,6 +168,7 @@ server.on('upgrade', (req, socket, head) => {
 // 충전기(OCPP-J 1.6 최소 구현): BootNotification, StatusNotification, Heartbeat만 처리
 chargerWss.on('connection', (ws, req, id) => {
   chargerSockets.set(id, ws);
+  forget(id); // 새로 접속할 때는 지점 배정 여부를 다시 확인합니다.
   upsertCharger(id, { connected: true, status: chargers.get(id)?.status || 'Unknown' });
   console.log(`[OCPP] ${id} 연결됨`);
 
